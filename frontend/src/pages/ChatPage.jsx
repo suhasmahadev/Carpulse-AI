@@ -1,5 +1,4 @@
 // src/pages/ChatPage.jsx
-
 import { useEffect, useState } from "react";
 import {
   listSessions,
@@ -8,6 +7,7 @@ import {
   getSession,
   sendMessageStream,
   uploadFile,
+  BASE_URL,
 } from "../api/chatApi";
 
 function mapEventsToMessages(events = []) {
@@ -64,6 +64,47 @@ async function fileToInlineData(file) {
     reader.readAsDataURL(file);
   });
 }
+// imports...
+
+function ChatMessageText({ text }) {
+  if (!text) return null;
+
+  // Detect URLs like: /service_images/xxxxx.png
+  const imageRegex = /\/service_images\/\S+\.(png|jpg|jpeg|gif|webp)/gi;
+  const matches = text.match(imageRegex) || [];
+
+  // Remove URLs from plain text so they don’t show as raw strings
+  const cleanedText = text.replace(imageRegex, "").trim();
+
+  const toAbsoluteUrl = (path) => {
+    if (!path) return "";
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path;
+    }
+    // path like /service_images/xxx.png
+    return `${BASE_URL}${path}`;
+  };
+
+  return (
+    <div className="chat-bubble-text">
+      {cleanedText && <p>{cleanedText}</p>}
+
+      {matches.length > 0 && (
+        <div className="chat-inline-images">
+          {matches.map((src, idx) => (
+            <img
+              key={idx}
+              src={toAbsoluteUrl(src)}
+              alt={`Service Image ${idx + 1}`}
+              className="chat-inline-image"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState([]);
@@ -419,46 +460,47 @@ export default function ChatPage() {
         {errorMsg && <div className="chat-banner-error">{errorMsg}</div>}
 
         <div className="chat-messages">
-          {messages.length === 0 ? (
-            <div className="chat-empty">
-              <h4>Start a conversation</h4>
-              <p>
-                Ask the agent to analyze logs, detect anomalies, or help you
-                record new service entries.
-              </p>
-            </div>
-          ) : (
-            messages.map((m, idx) => (
-              <div
-                key={idx}
-                className={
-                  "chat-message-row chat-message-" +
-                  (m.role === "user" ? "user" : "model")
-                }
-              >
-                <div className="chat-avatar">
-                  {m.role === "user" ? "You" : "AI"}
-                </div>
-                <div className="chat-bubble">
-                  {m.text && (
-                    <div className="chat-bubble-text">{m.text}</div>
-                  )}
-                  {m.attachments &&
-                    m.attachments.map((att, i) => {
-                      const mime = att.mimeType || "";
-                      const name =
-                        att.displayName || att.name || "attachment";
-                      // For now, just show a chip; you can later render images
-                      return (
-                        <div key={i} className="chat-attachment-chip">
-                          📎 {name}
-                        </div>
-                      );
-                    })}
-                </div>
+         {messages.length === 0 ? (
+  <div className="chat-empty">
+    <h4>Start a conversation</h4>
+    <p>
+      Ask the agent to analyze logs, detect anomalies, or help you 
+      record new service entries.
+    </p>
+  </div>
+) : (
+  messages.map((m, idx) => (
+    <div
+      key={idx}
+      className={
+        "chat-message-row chat-message-" +
+        (m.role === "user" ? "user" : "model")
+      }
+    >
+      <div className="chat-avatar">
+        {m.role === "user" ? "You" : "AI"}
+      </div>
+
+      <div className="chat-bubble">
+        {/* ✅ TEXT + IMAGES */}
+        {m.text && <ChatMessageText text={m.text} />}
+
+        {/* ✅ ATTACHMENTS */}
+        {m.attachments &&
+          m.attachments.map((att, i) => {
+            const mime = att.mimeType || "";
+            const name = att.displayName || att.name || "attachment";
+            return (
+              <div key={i} className="chat-attachment-chip">
+                📎 {name}
               </div>
-            ))
-          )}
+            );
+          })}
+      </div>
+    </div>
+  ))
+)}
+
         </div>
 
         {filePreview && (

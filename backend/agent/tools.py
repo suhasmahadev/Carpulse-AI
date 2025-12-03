@@ -5,6 +5,8 @@ from models.data_models import VehicleServiceLog, Mechanic
 from services.service import Service
 from repos.repo import Repo
 from constants import DB_NAME
+from twilio.rest import Client
+from typing import Dict, List
 
 repo = Repo(DB_NAME)
 service = Service(repo)
@@ -816,3 +818,184 @@ async def process_uploaded_service_images(
         }
     except Exception as e:
         return {"message": f"Error processing service images: {str(e)}", "success": False}
+ 
+async def send_service_reminders(days: int = 7) -> Dict:
+    """
+    Send SMS reminders to owners whose next service is due within the given number of days.
+
+    Uses:
+    - owner_name
+    - owner_phone_number
+    - vehicle_model
+    - next_service_date
+
+    Environment variables required (for real sending):
+    - TWILIO_ACCOUNT_SID
+    - TWILIO_AUTH_TOKEN
+    - TWILIO_FROM_NUMBER
+
+    If Twilio credentials are missing, this will NOT crash; it will just
+    simulate messages and return what *would* have been sent.
+    """
+    try:
+        # Get vehicles with service due soon using existing service layer
+        due_logs = await service.get_vehicles_due_soon(days_threshold=days)
+
+        if not due_logs:
+            return {
+                "message": f"No vehicles have service due in the next {days} days",
+                "success": True,
+                "data": []
+            }
+
+        # Read Twilio configuration
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        from_number = os.getenv("TWILIO_FROM_NUMBER")
+
+        twilio_enabled = bool(account_sid and auth_token and from_number)
+        client = Client(account_sid, auth_token) if twilio_enabled else None
+
+        reminder_results = []
+
+        for log in due_logs:
+            phone = getattr(log, "owner_phone_number", None)
+
+            # Skip logs with no phone
+            if not phone:
+                reminder_results.append({
+                    "vehicle_model": log.vehicle_model,
+                    "owner_name": log.owner_name,
+                    "owner_phone_number": None,
+                    "next_service_date": (
+                        log.next_service_date.strftime("%Y-%m-%d")
+                        if log.next_service_date else None
+                    ),
+                    "status": "skipped_no_phone"
+                })
+                continue
+
+            next_date_str = (
+                log.next_service_date.strftime("%Y-%m-%d")
+                if log.next_service_date else "Unknown"
+            )
+
+            msg_body = (
+                f"Reminder: Your {log.vehicle_model} (owner: {log.owner_name}) "
+                f"is due for service on {next_date_str}. "
+                f"Please schedule your visit with the service center."
+            )
+
+            send_status = "not_sent_twilio_disabled"
+
+            if twilio_enabled:
+                try:
+                    message = client.messages.create(
+                        body=msg_body,
+                        from_=from_number,
+                        to=phone
+                    )
+                    send_status = "sent" if message.sid else "unknown"
+                except Exception as sms_err:
+                    send_status = f"error_sending: {sms_err}"
+
+            reminder_results.append({
+                "vehicle_model": log.vehicle_model,
+                "owner_name": log.owner_name,
+                "owner_phone_number": phone,
+                "next_service_date": next_date_str,
+                "status": send_status,
+                "message_preview": msg_body
+            })
+
+        summary_sent = sum(1 for r in reminder_results if r["status"] == "sent")
+        summary_skipped = sum(1 for r in reminder_results if r["status"] == "skipped_no_phone")
+        summary_disabled = sum(1 for r in reminder_results if r["status"] == "not_sent_twilio_disabled")
+
+        summary_msg = (
+            f"Processed {len(reminder_results)} reminder(s) for the next {days} days. "
+            f"Sent: {summary_sent}, Skipped (no phone): {summary_skipped}, "
+            f"Not sent (Twilio disabled): {summary_disabled}."
+        )
+
+        if not twilio_enabled:
+            summary_msg += " Twilio credentials not configured; simulated only."
+
+        return {
+            "message": summary_msg,
+            "success": True,
+            "data": reminder_results
+        }
+
+    except Exception as e:
+        return {
+            "message": f"Error sending service reminders: {str(e)}",
+            "success": False,
+            "data": []
+        }
+import os
+from typing import Dict, List
+
+IMAGE_FOLDER = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "service_images")
+)
+
+async def get_vehicle_images(vehicle_id: str) -> Dict:
+    """
+    Retrieve all images stored under service_images/ that match the vehicle_id.
+
+    - You manually place files in backend/service_images/
+    - Any file whose name *starts with* the vehicle_id is considered a match.
+    - Returns:
+        - message: human-readable text INCLUDING the image URLs
+        - data: { vehicle_id, image_urls: [...] }
+    """
+    try:
+        if not os.path.exists(IMAGE_FOLDER):
+            return {
+                "message": "Image directory does not exist on the server.",
+                "success": False,
+                "data": {"vehicle_id": vehicle_id, "image_urls": []},
+            }
+
+        # Match files starting with the vehicle_id (case-insensitive)
+        matched_files: List[str] = [
+            f for f in os.listdir(IMAGE_FOLDER)
+            if f.lower().startswith(vehicle_id.lower())
+        ]
+
+        if not matched_files:
+            return {
+                "message": f"No images found for vehicle ID: {vehicle_id}",
+                "success": True,
+                "data": {"vehicle_id": vehicle_id, "image_urls": []},
+            }
+
+        # Build URL paths that the frontend can render
+        image_urls: List[str] = [
+            f"/service_images/{filename}"
+            for filename in matched_files
+        ]
+
+        # IMPORTANT: put the URLs directly in the message text
+        urls_block = "\n".join(image_urls)
+        msg = (
+            f"Found {len(image_urls)} image(s) for vehicle ID {vehicle_id}:\n"
+            f"{urls_block}"
+        )
+
+        return {
+            "message": msg,
+            "success": True,
+            "data": {
+                "vehicle_id": vehicle_id,
+                "image_urls": image_urls,
+            },
+        }
+
+    except Exception as e:
+        return {
+            "message": f"Error retrieving images for vehicle ID {vehicle_id}: {str(e)}",
+            "success": False,
+            "data": {"vehicle_id": vehicle_id, "image_urls": []},
+        }

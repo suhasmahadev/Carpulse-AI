@@ -11,6 +11,9 @@ from routers import vehicle_service_logs, mechanics, file_upload, voice
 
 from auth_db import Base as AuthBase, engine as auth_engine
 from routers.auth import router as auth_router
+from fastapi.staticfiles import StaticFiles
+
+
 
 # ---------- Core setup ----------
 
@@ -76,6 +79,14 @@ app.include_router(
     prefix="/vehicle_service_logs/api/voice",
     tags=["voice"],
 )
+
+# Ensure folder exists
+IMAGE_DIR = os.path.join(AGENT_DIR, "service_images")
+os.makedirs(IMAGE_DIR, exist_ok=True)
+
+# Expose service_images as static
+app.mount("/service_images", StaticFiles(directory=IMAGE_DIR), name="service_images")
+
 
 # ---------- Entrypoint ----------
 

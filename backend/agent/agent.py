@@ -31,6 +31,9 @@ root_agent = LlmAgent(
         # Multi-modal - Documentation tools
         upload_service_documentation,
         get_service_documentation,
-        process_uploaded_service_images
+        process_uploaded_service_images,
+        # 🔔 Reminder / Twilio tool
+        send_service_reminders,
+        get_vehicle_images,
     ]
 )

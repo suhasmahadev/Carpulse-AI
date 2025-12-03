@@ -1,7 +1,8 @@
 // src/api/chatApi.js
 
-const BASE_URL = "http://127.0.0.1:8080";
-const AGENT_NAME = "agent";
+// src/pages/ChatPage.jsx
+export const BASE_URL = "http://127.0.0.1:8080";
+export const AGENT_NAME = "agent";
 
 async function jsonOrThrow(res) {
   if (!res.ok) {
