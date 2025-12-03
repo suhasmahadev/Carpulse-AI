@@ -2,18 +2,13 @@ import os
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from google.adk.cli.fast_api import get_fast_api_app
-
 from services.service import Service
 from repos.repo import Repo
 from constants import DB_NAME
-
 from routers import vehicle_service_logs, mechanics, file_upload, voice
-
 from auth_db import Base as AuthBase, engine as auth_engine
 from routers.auth import router as auth_router
 from fastapi.staticfiles import StaticFiles
-
-
 
 # ---------- Core setup ----------
 
@@ -52,8 +47,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ---------- Include routers ----------
 
 # Auth: /auth/register, /auth/login, /auth/me
 app.include_router(auth_router)
