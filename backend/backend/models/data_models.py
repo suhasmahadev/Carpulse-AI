@@ -14,7 +14,6 @@ class VehicleServiceLog(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda dt: dt.isoformat()})
     id: Optional[str] = None
     owner_name: Optional[str] = None
-    owner_phone_number: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_id: str
     service_date: datetime

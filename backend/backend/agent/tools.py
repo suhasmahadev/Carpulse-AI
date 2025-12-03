@@ -14,7 +14,6 @@ service = Service(repo)
 async def add_vehicle_service_log(
     vehicle_model: str,
     owner_name: str,
-    owner_phone_number: str, 
     service_type: str,
     service_date: str,
     next_service_date: str,
@@ -28,7 +27,6 @@ async def add_vehicle_service_log(
     Args:
         vehicle_model: Model of the vehicle (e.g., "Hyundai Creta")
         owner_name: Name of the vehicle owner
-        owner_phone_number: Contact number of the vehicle owner
         service_type: Type of service performed
         service_date: Date of service in YYYY-MM-DD format
         next_service_date: Date for next service in YYYY-MM-DD format
@@ -43,7 +41,6 @@ async def add_vehicle_service_log(
         log_data = VehicleServiceLog(
             vehicle_model=vehicle_model,
             owner_name=owner_name,
-            owner_phone_number=owner_phone_number,
             vehicle_id=vehicle_id,
             service_date=datetime.strptime(service_date, "%Y-%m-%d"),
             service_type=service_type,
@@ -61,7 +58,6 @@ async def add_vehicle_service_log(
                 "id": result.id,
                 "vehicle_model": result.vehicle_model,
                 "owner_name": result.owner_name,
-                "owner_phone_number": result.owner_phone_number, 
                 "service_type": result.service_type,
                 "service_date": result.service_date.strftime("%Y-%m-%d"),
                 "cost": result.cost
@@ -94,7 +90,6 @@ async def list_services_by_vehicle(vehicle_model: str) -> Dict:
                 "id": log.id,
                 "vehicle_model": log.vehicle_model,
                 "owner_name": log.owner_name,
-                "owner_phone_number": log.owner_phone_number,
                 "service_type": log.service_type,
                 "service_date": log.service_date.strftime("%Y-%m-%d"),
                 "next_service_date": log.next_service_date.strftime("%Y-%m-%d") if log.next_service_date else "Not set",
@@ -145,7 +140,6 @@ async def get_vehicles_service_due_soon(days: int = 30) -> Dict:
                         formatted_logs.append({
                             "vehicle_model": log.vehicle_model or "Unknown",
                             "owner_name": log.owner_name or "Unknown",
-                            "owner_phone_number": log.owner_phone_number or "Unknown",
                             "next_service_date": next_service.strftime("%Y-%m-%d"),
                             "days_until_service": days_until,
                             "last_service_type": log.service_type or "Unknown",
@@ -329,7 +323,6 @@ async def get_most_recent_service() -> Dict:
             "most_recent_service": {
                 "vehicle_model": most_recent.vehicle_model,
                 "owner_name": most_recent.owner_name,
-                "owner_phone_number": most_recent.owner_phone_number,
                 "service_date": service_date_str,
                 "service_type": most_recent.service_type,
                 "cost": most_recent.cost,
@@ -345,72 +338,61 @@ async def get_most_recent_service() -> Dict:
             "most_recent_service": None
         }
 
+
 async def get_overdue_services() -> Dict:
-    """
-    Find services that are overdue based on next_service_date.
-    Overdue = next_service_date < today.
-    """
+    """List all services that are overdue for the next maintenance date."""
     try:
         all_logs = await service.get_vehicle_service_logs(None)
-
-        if not all_logs:
-            return {
-                "message": "No services found in the database",
-                "success": True,
-                "data": []
-            }
-
         today = datetime.now().date()
-        overdue_logs = []
-
+        overdue_services = []
+        
         for log in all_logs:
-            if not log.next_service_date:
-                continue
-
-            try:
-                # Handle both string and datetime objects for next_service_date
-                if isinstance(log.next_service_date, str):
-                    next_service = datetime.fromisoformat(log.next_service_date).date()
-                else:
-                    next_service = log.next_service_date.date()
-
-                if next_service < today:
-                    overdue_logs.append({
-                        "vehicle_model": log.vehicle_model or "Unknown",
-                        "owner_name": log.owner_name or "Unknown",
-                        "owner_phone_number": log.owner_phone_number or "Unknown",
-                        "next_service_date": next_service.strftime("%Y-%m-%d"),
-                        "last_service_type": log.service_type or "Unknown",
-                        "last_service_date": log.service_date.strftime("%Y-%m-%d") if log.service_date else "Unknown",
-                        "cost": log.cost,
-                        "mileage": log.mileage,
-                        "mechanic_id": log.mechanic_id
-                    })
-            except Exception as e:
-                print(f"Error processing log {getattr(log, 'id', 'unknown')}: {e}")
-                continue
-
-        if not overdue_logs:
+            if log.next_service_date:
+                try:
+                    # Handle both string and datetime objects
+                    if isinstance(log.next_service_date, str):
+                        next_service = datetime.fromisoformat(log.next_service_date).date()
+                    else:
+                        next_service = log.next_service_date.date()
+                    
+                    if next_service < today:
+                        days_overdue = (today - next_service).days
+                        overdue_services.append({
+                            "vehicle_model": log.vehicle_model or "Unknown",
+                            "owner_name": log.owner_name or "Unknown",
+                            "next_service_date": next_service.strftime("%Y-%m-%d"),
+                            "days_overdue": days_overdue,
+                            "last_service_date": log.service_date.strftime("%Y-%m-%d") if log.service_date else "Unknown"
+                        })
+                except Exception as e:
+                    print(f"Error processing overdue service {log.id}: {e}")
+                    continue
+        
+        if not overdue_services:
             return {
-                "message": "No overdue services found",
+                "message": "No overdue services found. All vehicles are up to date!",
                 "success": True,
-                "data": []
+                "overdue_services": []
             }
-
-        # Sort by how overdue they are (oldest next_service_date first)
-        overdue_logs.sort(key=lambda x: x["next_service_date"])
-
+        
+        # Sort by days overdue (most overdue first)
+        overdue_services.sort(key=lambda x: x["days_overdue"], reverse=True)
+        
+        overdue_list = "\n".join([
+            f"- {svc['vehicle_model']} ({svc['owner_name']}): Due on {svc['next_service_date']} ({svc['days_overdue']} days overdue)"
+            for svc in overdue_services
+        ])
+        
         return {
-            "message": f"Found {len(overdue_logs)} overdue service(s)",
+            "message": f"Found {len(overdue_services)} overdue service(s):\n{overdue_list}",
             "success": True,
-            "data": overdue_logs
+            "overdue_services": overdue_services
         }
-
     except Exception as e:
         return {
             "message": f"Error retrieving overdue services: {str(e)}",
             "success": False,
-            "data": []
+            "overdue_services": []
         }
 
 
@@ -681,40 +663,22 @@ async def upload_service_documentation(
         description: Description of the uploaded document
     """
     try:
-        # Actual file handling / extraction happens elsewhere in your stack.
-        # Here we just return a structured payload with all required fields
-        # so the agent can use or fill them.
-
+        # This would typically handle the actual file upload
+        # For now, we'll create a record of the upload
+        
         return {
-            "message": (
-                f"Successfully linked {document_type} documentation for "
-                f"{vehicle_model} service on {service_date}"
-            ),
+            "message": f"Successfully linked {document_type} documentation for {vehicle_model} service on {service_date}",
             "success": True,
             "data": {
                 "vehicle_model": vehicle_model,
                 "service_date": service_date,
                 "document_type": document_type,
                 "description": description,
-                "upload_timestamp": datetime.now().isoformat(),
-                # Full structured field block for a service log
-                "extracted_fields": {
-                    "owner_name": "",
-                    "owner_phone_number": "",
-                    "vehicle_model": vehicle_model,
-                    "vehicle_id": "",
-                    "service_type": "",
-                    "service_date": service_date,
-                    "next_service_date": "",
-                    "cost": 0.0,
-                    "mileage": 0,
-                    "description": description or "",
-                },
-            },
+                "upload_timestamp": datetime.now().isoformat()
+            }
         }
     except Exception as e:
         return {"message": f"Error uploading documentation: {str(e)}", "success": False}
-
 
 async def get_service_documentation(vehicle_model: str) -> Dict:
     """
@@ -724,61 +688,32 @@ async def get_service_documentation(vehicle_model: str) -> Dict:
         vehicle_model: Vehicle model to get documentation for
     """
     try:
-        # Still a mock list, but now each document includes a consistent
-        # extracted_fields block that the agent can read/complete.
-        documents = [
-            {
-                "type": "invoice",
-                "date": "2024-01-15",
-                "description": "Service invoice and receipt",
-                "extracted_fields": {
-                    "owner_name": "",
-                    "owner_phone_number": "",
-                    "vehicle_model": vehicle_model,
-                    "vehicle_id": "",
-                    "service_type": "",
-                    "service_date": "2024-01-15",
-                    "next_service_date": "",
-                    "cost": 0.0,
-                    "mileage": 0,
-                    "description": "Service invoice and receipt",
-                },
-            },
-            {
-                "type": "photo",
-                "date": "2024-01-15",
-                "description": "Before and after service photos",
-                "extracted_fields": {
-                    "owner_name": "",
-                    "owner_phone_number": "",
-                    "vehicle_model": vehicle_model,
-                    "vehicle_id": "",
-                    "service_type": "",
-                    "service_date": "2024-01-15",
-                    "next_service_date": "",
-                    "cost": 0.0,
-                    "mileage": 0,
-                    "description": "Before and after service photos",
-                },
-            },
-        ]
-
+        # This would typically query uploaded files
+        # For now, we'll return a mock response
+        
         return {
             "message": f"Documentation for {vehicle_model}:",
             "success": True,
             "data": {
                 "vehicle_model": vehicle_model,
-                "documents": documents,
-            },
+                "documents": [
+                    {
+                        "type": "invoice",
+                        "date": "2024-01-15",
+                        "description": "Service invoice and receipt"
+                    },
+                    {
+                        "type": "photo", 
+                        "date": "2024-01-15",
+                        "description": "Before and after service photos"
+                    }
+                ]
+            }
         }
     except Exception as e:
         return {"message": f"Error retrieving documentation: {str(e)}", "success": False}
 
-
-async def process_uploaded_service_images(
-    vehicle_model: str,
-    image_description: str = ""
-) -> Dict:
+async def process_uploaded_service_images(vehicle_model: str, image_description: str = "") -> Dict:
     """
     Process uploaded service images and link them to vehicle service records.
     
@@ -788,31 +723,14 @@ async def process_uploaded_service_images(
     """
     try:
         return {
-            "message": (
-                f"Successfully processed service images for {vehicle_model}. "
-                f"Images show: {image_description}"
-            ),
+            "message": f"Successfully processed service images for {vehicle_model}. Images show: {image_description}",
             "success": True,
             "data": {
                 "vehicle_model": vehicle_model,
                 "image_description": image_description,
                 "processed_at": datetime.now().isoformat(),
-                "images_linked": True,
-                # Again, expose full required fields so the agent can map
-                # image content into a potential service log.
-                "extracted_fields": {
-                    "owner_name": "",
-                    "owner_phone_number": "",
-                    "vehicle_model": vehicle_model,
-                    "vehicle_id": "",
-                    "service_type": "",
-                    "service_date": "",
-                    "next_service_date": "",
-                    "cost": 0.0,
-                    "mileage": 0,
-                    "description": image_description or "",
-                },
-            },
+                "images_linked": True
+            }
         }
     except Exception as e:
         return {"message": f"Error processing service images: {str(e)}", "success": False}

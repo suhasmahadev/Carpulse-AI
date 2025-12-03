@@ -4,8 +4,7 @@ from typing import List, Optional
 from models.data_models import VehicleServiceLog, Mechanic
 from constants import DB_NAME, TABLE_NAME
 from uuid import uuid4
-import datetime as dt  # you had this; leaving it
-
+import datetime as dt
 
 class Repo:
     def __init__(self, db_path: str = DB_NAME):
@@ -19,7 +18,6 @@ class Repo:
                 CREATE TABLE IF NOT EXISTS vehicle_service_logs (
                     id TEXT PRIMARY KEY,
                     owner_name TEXT,
-                    owner_phone_number TEXT,
                     vehicle_model TEXT,
                     vehicle_id TEXT,
                     service_date TEXT,
@@ -43,7 +41,7 @@ class Repo:
                 )
             """)
             
-            # Check if we need to migrate from old schema (vehicle_type → vehicle_model)
+            # Check if we need to migrate from old schema
             try:
                 # Try to query the vehicle_model column
                 await db.execute("SELECT vehicle_model FROM vehicle_service_logs LIMIT 1")
@@ -58,13 +56,6 @@ class Repo:
                 except aiosqlite.OperationalError:
                     # Neither column exists in old format, table is empty or newly created
                     pass
-
-            # Migration: add owner_phone_number if missing
-            try:
-                await db.execute("SELECT owner_phone_number FROM vehicle_service_logs LIMIT 1")
-            except aiosqlite.OperationalError:
-                await db.execute("ALTER TABLE vehicle_service_logs ADD COLUMN owner_phone_number TEXT")
-                print("Database schema migrated: added owner_phone_number column")
             
             await db.commit()
 
@@ -73,25 +64,11 @@ class Repo:
             if log.id is None:
                 log.id = str(uuid4())
             await db.execute(f"""
-                INSERT INTO {TABLE_NAME} (
-                    id,
-                    owner_name,
-                    owner_phone_number,
-                    vehicle_model,
-                    vehicle_id,
-                    service_date,
-                    service_type,
-                    description,
-                    mileage,
-                    cost,
-                    next_service_date,
-                    mechanic_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO {TABLE_NAME} (id, owner_name, vehicle_model, vehicle_id, service_date, service_type, description, mileage, cost, next_service_date, mechanic_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 log.id,
                 log.owner_name,
-                log.owner_phone_number,
                 log.vehicle_model,
                 log.vehicle_id,
                 log.service_date.isoformat(),
@@ -106,21 +83,8 @@ class Repo:
 
     async def get(self, log_id: str) -> Optional[VehicleServiceLog]:
         query = f"""
-            SELECT
-                id,
-                owner_name,
-                owner_phone_number,
-                vehicle_model,
-                vehicle_id,
-                service_date,
-                service_type,
-                description,
-                mileage,
-                cost,
-                next_service_date,
-                mechanic_id
-            FROM {TABLE_NAME}
-            WHERE id = ?
+            SELECT id, owner_name, vehicle_model, vehicle_id, service_date, service_type, description, mileage, cost, next_service_date, mechanic_id
+            FROM {TABLE_NAME} WHERE id = ?
         """
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(query, (log_id,))
@@ -129,37 +93,21 @@ class Repo:
                 return VehicleServiceLog(
                     id=row[0],
                     owner_name=row[1],
-                    owner_phone_number=row[2],
-                    vehicle_model=row[3],
-                    vehicle_id=row[4],
-                    service_date=datetime.fromisoformat(row[5]),
-                    service_type=row[6],
-                    description=row[7],
-                    mileage=row[8],
-                    cost=row[9],
-                    next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    vehicle_model=row[2],
+                    vehicle_id=row[3],
+                    service_date=datetime.fromisoformat(row[4]),
+                    service_type=row[5],
+                    description=row[6],
+                    mileage=row[7],
+                    cost=row[8],
+                    next_service_date=datetime.fromisoformat(row[9]) if row[9] else None,
+                    mechanic_id=row[10]
                 )
             return None
 
     async def list(self, vehicle_id: Optional[str] = None) -> List[VehicleServiceLog]:
         async with aiosqlite.connect(self.db_path) as db:
-            query = f"""
-                SELECT
-                    id,
-                    owner_name,
-                    owner_phone_number,
-                    vehicle_model,
-                    vehicle_id,
-                    service_date,
-                    service_type,
-                    description,
-                    mileage,
-                    cost,
-                    next_service_date,
-                    mechanic_id
-                FROM {TABLE_NAME}
-            """
+            query = f"SELECT id, owner_name, vehicle_model, vehicle_id, service_date, service_type, description, mileage, cost, next_service_date, mechanic_id FROM {TABLE_NAME}"
             params = []
             if vehicle_id:
                 query += " WHERE vehicle_id = ?"
@@ -171,16 +119,15 @@ class Repo:
                 VehicleServiceLog(
                     id=row[0],
                     owner_name=row[1],
-                    owner_phone_number=row[2],
-                    vehicle_model=row[3],
-                    vehicle_id=row[4],
-                    service_date=datetime.fromisoformat(row[5]),
-                    service_type=row[6],
-                    description=row[7],
-                    mileage=row[8],
-                    cost=row[9],
-                    next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    vehicle_model=row[2],
+                    vehicle_id=row[3],
+                    service_date=datetime.fromisoformat(row[4]),
+                    service_type=row[5],
+                    description=row[6],
+                    mileage=row[7],
+                    cost=row[8],
+                    next_service_date=datetime.fromisoformat(row[9]) if row[9] else None,
+                    mechanic_id=row[10]
                 )
                 for row in rows
             ]
@@ -188,39 +135,22 @@ class Repo:
     async def list_by_vehicle_model(self, vehicle_model: str) -> List[VehicleServiceLog]:
         """List all services for a specific vehicle model"""
         async with aiosqlite.connect(self.db_path) as db:
-            query = f"""
-                SELECT
-                    id,
-                    owner_name,
-                    owner_phone_number,
-                    vehicle_model,
-                    vehicle_id,
-                    service_date,
-                    service_type,
-                    description,
-                    mileage,
-                    cost,
-                    next_service_date,
-                    mechanic_id
-                FROM {TABLE_NAME}
-                WHERE vehicle_model LIKE ?
-            """
+            query = f"SELECT id, owner_name, vehicle_model, vehicle_id, service_date, service_type, description, mileage, cost, next_service_date, mechanic_id FROM {TABLE_NAME} WHERE vehicle_model LIKE ?"
             cursor = await db.execute(query, (f"%{vehicle_model}%",))
             rows = await cursor.fetchall()
             return [
                 VehicleServiceLog(
                     id=row[0],
                     owner_name=row[1],
-                    owner_phone_number=row[2],
-                    vehicle_model=row[3],
-                    vehicle_id=row[4],
-                    service_date=datetime.fromisoformat(row[5]),
-                    service_type=row[6],
-                    description=row[7],
-                    mileage=row[8],
-                    cost=row[9],
-                    next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    vehicle_model=row[2],
+                    vehicle_id=row[3],
+                    service_date=datetime.fromisoformat(row[4]),
+                    service_type=row[5],
+                    description=row[6],
+                    mileage=row[7],
+                    cost=row[8],
+                    next_service_date=datetime.fromisoformat(row[9]) if row[9] else None,
+                    mechanic_id=row[10]
                 )
                 for row in rows
             ]
@@ -236,20 +166,9 @@ class Repo:
             
             async with aiosqlite.connect(self.db_path) as db:
                 query = f"""
-                    SELECT
-                        id,
-                        owner_name,
-                        owner_phone_number,
-                        vehicle_model,
-                        vehicle_id,
-                        service_date,
-                        service_type,
-                        description,
-                        mileage,
-                        cost,
-                        next_service_date,
-                        mechanic_id
-                    FROM {TABLE_NAME}
+                    SELECT id, owner_name, vehicle_model, vehicle_id, service_date, service_type, 
+                           description, mileage, cost, next_service_date, mechanic_id
+                    FROM {TABLE_NAME} 
                     WHERE next_service_date IS NOT NULL 
                     AND date(next_service_date) <= date(?)
                     AND date(next_service_date) >= date(?)
@@ -265,16 +184,15 @@ class Repo:
                         log = VehicleServiceLog(
                             id=row[0],
                             owner_name=row[1],
-                            owner_phone_number=row[2],
-                            vehicle_model=row[3],
-                            vehicle_id=row[4],
-                            service_date=datetime.fromisoformat(row[5]),
-                            service_type=row[6],
-                            description=row[7],
-                            mileage=row[8],
-                            cost=row[9],
-                            next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                            mechanic_id=row[11]
+                            vehicle_model=row[2],
+                            vehicle_id=row[3],
+                            service_date=datetime.fromisoformat(row[4]),
+                            service_type=row[5],
+                            description=row[6],
+                            mileage=row[7],
+                            cost=row[8],
+                            next_service_date=datetime.fromisoformat(row[9]) if row[9] else None,
+                            mechanic_id=row[10]
                         )
                         logs.append(log)
                     except Exception as e:
@@ -290,29 +208,20 @@ class Repo:
     async def update_service_cost_by_model(self, vehicle_model: str, new_cost: float) -> bool:
         """Update service cost for all logs of a specific vehicle model"""
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                f"UPDATE {TABLE_NAME} SET cost = ? WHERE vehicle_model LIKE ?",
-                (new_cost, f"%{vehicle_model}%")
-            )
+            cursor = await db.execute(f"UPDATE {TABLE_NAME} SET cost = ? WHERE vehicle_model LIKE ?", (new_cost, f"%{vehicle_model}%"))
             await db.commit()
             return cursor.rowcount > 0
 
     async def delete_by_vehicle_model(self, vehicle_model: str) -> bool:
         """Delete all logs for a specific vehicle model"""
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                f"DELETE FROM {TABLE_NAME} WHERE vehicle_model LIKE ?",
-                (f"%{vehicle_model}%",)
-            )
+            cursor = await db.execute(f"DELETE FROM {TABLE_NAME} WHERE vehicle_model LIKE ?", (f"%{vehicle_model}%",))
             await db.commit()
             return cursor.rowcount > 0
 
     async def delete(self, log_id: str) -> int:
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                f"DELETE FROM {TABLE_NAME} WHERE id = ?",
-                (log_id,)
-            )
+            cursor = await db.execute(f"DELETE FROM {TABLE_NAME} WHERE id = ?", (log_id,))
             await db.commit()
             return cursor.rowcount
 
@@ -320,22 +229,10 @@ class Repo:
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(f"""
                 UPDATE {TABLE_NAME}
-                SET
-                    owner_name = ?,
-                    owner_phone_number = ?,
-                    vehicle_model = ?,
-                    vehicle_id = ?,
-                    service_date = ?,
-                    service_type = ?,
-                    description = ?,
-                    mileage = ?,
-                    cost = ?,
-                    next_service_date = ?,
-                    mechanic_id = ?
+                SET owner_name = ?, vehicle_model = ?, vehicle_id = ?, service_date = ?, service_type = ?, description = ?, mileage = ?, cost = ?, next_service_date = ?, mechanic_id = ?
                 WHERE id = ?
             """, (
                 log.owner_name,
-                log.owner_phone_number,
                 log.vehicle_model,
                 log.vehicle_id,
                 log.service_date.isoformat(),
@@ -370,10 +267,7 @@ class Repo:
 
     async def get_mechanic(self, mechanic_id: str) -> Optional[Mechanic]:
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                "SELECT id, name, specialization, contact_number, experience_years FROM mechanics WHERE id = ?",
-                (mechanic_id,)
-            )
+            cursor = await db.execute("SELECT id, name, specialization, contact_number, experience_years FROM mechanics WHERE id = ?", (mechanic_id,))
             row = await cursor.fetchone()
             if row:
                 return Mechanic(
@@ -387,9 +281,7 @@ class Repo:
 
     async def list_mechanics(self) -> List[Mechanic]:
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                "SELECT id, name, specialization, contact_number, experience_years FROM mechanics"
-            )
+            cursor = await db.execute("SELECT id, name, specialization, contact_number, experience_years FROM mechanics")
             rows = await cursor.fetchall()
             return [
                 Mechanic(
@@ -421,10 +313,7 @@ class Repo:
 
     async def delete_mechanic(self, mechanic_id: str) -> bool:
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute(
-                "DELETE FROM mechanics WHERE id = ?",
-                (mechanic_id,)
-            )
+            cursor = await db.execute("DELETE FROM mechanics WHERE id = ?", (mechanic_id,))
             await db.commit()
             return cursor.rowcount > 0
 

@@ -7,7 +7,7 @@ import {
   updateLog,
   deleteLog,
 } from "../api/logsApi.js";
-import "../styles/logs.css";
+import '../styles/logs.css';
 
 // small helper
 function formatDate(dateString) {
@@ -30,10 +30,6 @@ function LogCard({ log, onEdit, onDelete }) {
         <h3>{log.vehicle_model || "Unknown Model"}</h3>
         <p>
           <strong>Owner:</strong> {log.owner_name || "N/A"}
-        </p>
-        <p>
-          <strong>Owner Phone:</strong>{" "}
-          {log.owner_phone_number || "N/A"}
         </p>
         <p>
           <strong>Vehicle ID:</strong> {log.vehicle_id || "N/A"}
@@ -104,7 +100,6 @@ function DeleteConfirmModal({ open, onCancel, onConfirm }) {
 
 const emptyLog = {
   owner_name: "",
-  owner_phone_number: "", // ✅ NEW FIELD
   vehicle_model: "",
   vehicle_id: "",
   service_date: "",
@@ -163,7 +158,6 @@ function LogFormModal({ open, initialLog, mechanics, onClose, onSave }) {
 
     const payload = {
       owner_name: values.owner_name.trim(),
-      owner_phone_number: values.owner_phone_number.trim(), // ✅ SEND TO BACKEND
       vehicle_model: values.vehicle_model.trim(),
       vehicle_id,
       service_date: new Date(values.service_date).toISOString(),
@@ -197,19 +191,6 @@ function LogFormModal({ open, initialLog, mechanics, onClose, onSave }) {
               name="owner_name"
               required
               value={values.owner_name}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* ✅ NEW FIELD: Owner Phone Number */}
-          <div className="form-group">
-            <label htmlFor="owner_phone_number">Owner Phone Number *</label>
-            <input
-              id="owner_phone_number"
-              name="owner_phone_number"
-              required
-              placeholder="+91 98765 43210"
-              value={values.owner_phone_number}
               onChange={handleChange}
             />
           </div>
