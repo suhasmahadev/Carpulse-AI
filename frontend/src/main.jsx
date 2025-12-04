@@ -8,7 +8,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import LogsPage from "./pages/LogsPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
-
+import EstimatePricePage from "./pages/EstimatePricePage.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 
 import "./styles/globals.css";
@@ -47,6 +47,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             />
             <Route path="*" element={<NotFoundPage />} />
+            <Route path="/estimate" element={
+              <ProtectedRoute><EstimatePricePage /></ProtectedRoute>} />
+
           </Route>
         </Routes>
       </BrowserRouter>

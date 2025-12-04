@@ -29,6 +29,9 @@ export default function Header() {
             <Link to="/chat" className={isActive("/chat")}>
               Chat with Agent
             </Link>
+            <Link to="/estimate" className={isActive("/estimate")}>
+              Estimate with ML
+            </Link>
           </>
         )}
       </nav>
