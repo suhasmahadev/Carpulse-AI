@@ -44,9 +44,9 @@ function LogCard({ log, onEdit, onDelete }) {
         <p>
           <strong>Service Type:</strong> {log.service_type || "N/A"}
         </p>
-        {log.mechanic_id && (
+        {log.mechanic_name && (
           <p>
-            <strong>Mechanic ID:</strong> {log.mechanic_id}
+            <strong>Mechanic name:</strong> {log.mechanic_name || "N/A"}
           </p>
         )}
         <p>
@@ -109,7 +109,7 @@ const emptyLog = {
   vehicle_id: "",
   service_date: "",
   service_type: "",
-  mechanic_id: "",
+  mechanic_name: "",
   description: "",
   mileage: "",
   cost: "",
@@ -168,7 +168,7 @@ function LogFormModal({ open, initialLog, mechanics, onClose, onSave }) {
       vehicle_id,
       service_date: new Date(values.service_date).toISOString(),
       service_type: values.service_type,
-      mechanic_id: values.mechanic_id || null,
+      mechanic_name: values.mechanic_name|| null,
       description: values.description.trim(),
       mileage: parseInt(values.mileage || "0", 10),
       cost: parseFloat(values.cost || "0"),
@@ -251,44 +251,29 @@ function LogFormModal({ open, initialLog, mechanics, onClose, onSave }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="service_type">Service Type *</label>
-            <select
-              id="service_type"
-              name="service_type"
-              required
-              value={values.service_type}
-              onChange={handleChange}
-            >
-              <option value="">Select Service Type</option>
-              <option value="Regular Maintenance">Regular Maintenance</option>
-              <option value="Major Service">Major Service</option>
-              <option value="Oil Change">Oil Change</option>
-              <option value="Brake Service">Brake Service</option>
-              <option value="Tire Rotation">Tire Rotation</option>
-              <option value="AC Service">AC Service</option>
-              <option value="Battery Replacement">Battery Replacement</option>
-              <option value="Comprehensive Check">Comprehensive Check</option>
-              <option value="Periodic Service">Periodic Service</option>
-            </select>
-          </div>
+  <label htmlFor="service_type">Service Type *</label>
+  <input
+    id="service_type"
+    name="service_type"
+    required
+    placeholder="e.g., Brake Service, Engine Repair"
+    value={values.service_type}
+    onChange={handleChange}
+  />
+</div>
+
 
           <div className="form-group">
-            <label htmlFor="mechanic_id">Assigned Mechanic</label>
-            <select
-              id="mechanic_id"
-              name="mechanic_id"
-              value={values.mechanic_id || ""}
-              onChange={handleChange}
-            >
-              <option value="">Select Mechanic</option>
-              {mechanics.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} - {m.specialization} ({m.experience_years} years)
-                </option>
-              ))}
-            </select>
-            <small>Choose a mechanic for this service</small>
-          </div>
+  <label htmlFor="mechanic_name">Mechanic name</label>
+  <input
+    id="mechanic_name"
+    name="mechanic_name"
+    placeholder="Enter mechanic name or leave empty"
+    value={values.mechanic_name || ""}
+    onChange={handleChange}
+  />
+</div>
+
 
           <div className="form-group">
             <label htmlFor="description">Description</label>

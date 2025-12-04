@@ -28,10 +28,10 @@ class Repo:
                     mileage INTEGER,
                     cost REAL,
                     next_service_date TEXT,
-                    mechanic_id TEXT
+                    mechanic_name TEXT
                 )
             """)
-            
+
             # Mechanics table
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS mechanics (
@@ -42,7 +42,7 @@ class Repo:
                     experience_years INTEGER
                 )
             """)
-            
+
             # Check if we need to migrate from old schema (vehicle_type → vehicle_model)
             try:
                 # Try to query the vehicle_model column
@@ -65,10 +65,17 @@ class Repo:
             except aiosqlite.OperationalError:
                 await db.execute("ALTER TABLE vehicle_service_logs ADD COLUMN owner_phone_number TEXT")
                 print("Database schema migrated: added owner_phone_number column")
-            
+
+            # Migration: add mechanic_name if missing (for older DBs)  # <-- CHANGED: new migration block
+            try:
+                await db.execute("SELECT mechanic_name FROM vehicle_service_logs LIMIT 1")
+            except aiosqlite.OperationalError:
+                await db.execute("ALTER TABLE vehicle_service_logs ADD COLUMN mechanic_name TEXT")
+                print("Database schema migrated: added mechanic_name column")  # <-- CHANGED
+
             await db.commit()
 
-    async def insert(self, log: VehicleServiceLog):
+    async def insert(self, log: VehicleServiceLog) -> VehicleServiceLog:  # <-- CHANGED: explicit return type
         async with aiosqlite.connect(self.db_path) as db:
             if log.id is None:
                 log.id = str(uuid4())
@@ -85,7 +92,7 @@ class Repo:
                     mileage,
                     cost,
                     next_service_date,
-                    mechanic_id
+                    mechanic_name
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
@@ -100,9 +107,10 @@ class Repo:
                 log.mileage,
                 log.cost,
                 log.next_service_date.isoformat() if log.next_service_date else None,
-                log.mechanic_id
+                log.mechanic_name
             ))
             await db.commit()
+            return log  # <-- CHANGED: return the created log so Service / FastAPI can respond
 
     async def get(self, log_id: str) -> Optional[VehicleServiceLog]:
         query = f"""
@@ -118,7 +126,7 @@ class Repo:
                 mileage,
                 cost,
                 next_service_date,
-                mechanic_id
+                mechanic_name
             FROM {TABLE_NAME}
             WHERE id = ?
         """
@@ -138,7 +146,7 @@ class Repo:
                     mileage=row[8],
                     cost=row[9],
                     next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    mechanic_name=row[11]
                 )
             return None
 
@@ -157,14 +165,14 @@ class Repo:
                     mileage,
                     cost,
                     next_service_date,
-                    mechanic_id
+                    mechanic_name
                 FROM {TABLE_NAME}
             """
             params = []
             if vehicle_id:
                 query += " WHERE vehicle_id = ?"
                 params.append(vehicle_id)
-            
+
             cursor = await db.execute(query, params)
             rows = await cursor.fetchall()
             return [
@@ -180,7 +188,7 @@ class Repo:
                     mileage=row[8],
                     cost=row[9],
                     next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    mechanic_name=row[11]
                 )
                 for row in rows
             ]
@@ -201,7 +209,7 @@ class Repo:
                     mileage,
                     cost,
                     next_service_date,
-                    mechanic_id
+                    mechanic_name
                 FROM {TABLE_NAME}
                 WHERE vehicle_model LIKE ?
             """
@@ -220,7 +228,7 @@ class Repo:
                     mileage=row[8],
                     cost=row[9],
                     next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                    mechanic_id=row[11]
+                    mechanic_name=row[11]
                 )
                 for row in rows
             ]
@@ -229,11 +237,11 @@ class Repo:
         """Get vehicles with next service due within specified days"""
         try:
             from datetime import datetime, timedelta
-            
+
             # Calculate future date
             today = datetime.now().date()
             future_date = (today + timedelta(days=days_threshold)).isoformat()
-            
+
             async with aiosqlite.connect(self.db_path) as db:
                 query = f"""
                     SELECT
@@ -248,17 +256,16 @@ class Repo:
                         mileage,
                         cost,
                         next_service_date,
-                        mechanic_id
+                        mechanic_name
                     FROM {TABLE_NAME}
                     WHERE next_service_date IS NOT NULL 
                     AND date(next_service_date) <= date(?)
                     AND date(next_service_date) >= date(?)
                 """
-                
-                # Use today's date and future date for comparison
+
                 cursor = await db.execute(query, (future_date, today.isoformat()))
                 rows = await cursor.fetchall()
-                
+
                 logs = []
                 for row in rows:
                     try:
@@ -274,15 +281,15 @@ class Repo:
                             mileage=row[8],
                             cost=row[9],
                             next_service_date=datetime.fromisoformat(row[10]) if row[10] else None,
-                            mechanic_id=row[11]
+                            mechanic_name=row[11]
                         )
                         logs.append(log)
                     except Exception as e:
                         print(f"Error parsing log {row[0]}: {e}")
                         continue
-                
+
                 return logs
-                
+
         except Exception as e:
             print(f"Error in get_vehicles_due_soon: {e}")
             return []
@@ -331,7 +338,7 @@ class Repo:
                     mileage = ?,
                     cost = ?,
                     next_service_date = ?,
-                    mechanic_id = ?
+                    mechanic_name = ?
                 WHERE id = ?
             """, (
                 log.owner_name,
@@ -344,7 +351,7 @@ class Repo:
                 log.mileage,
                 log.cost,
                 log.next_service_date.isoformat() if log.next_service_date else None,
-                log.mechanic_id,
+                log.mechanic_name,
                 log.id
             ))
             await db.commit()
@@ -434,7 +441,8 @@ class Repo:
             cursor = await db.execute("""
                 SELECT m.id, m.name, COUNT(vsl.id) as service_count
                 FROM mechanics m
-                LEFT JOIN vehicle_service_logs vsl ON m.id = vsl.mechanic_id
+                LEFT JOIN vehicle_service_logs vsl 
+                    ON m.name = vsl.mechanic_name   -- <-- CHANGED: join on mechanic_name instead of missing mechanic_id
                 GROUP BY m.id, m.name
                 ORDER BY service_count DESC
                 LIMIT 1
@@ -454,7 +462,8 @@ class Repo:
             cursor = await db.execute("""
                 SELECT m.id, m.name, COALESCE(SUM(vsl.cost), 0) as total_cost
                 FROM mechanics m
-                LEFT JOIN vehicle_service_logs vsl ON m.id = vsl.mechanic_id
+                LEFT JOIN vehicle_service_logs vsl 
+                    ON m.name = vsl.mechanic_name   -- <-- CHANGED: join on mechanic_name instead of missing mechanic_id
                 GROUP BY m.id, m.name
                 ORDER BY total_cost DESC
             """)

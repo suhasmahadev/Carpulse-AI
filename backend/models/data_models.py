@@ -11,16 +11,16 @@ class Mechanic(BaseModel):
     experience_years: int
 
 class VehicleServiceLog(BaseModel):
-    model_config = ConfigDict(json_encoders={datetime: lambda dt: dt.isoformat()})
     id: Optional[str] = None
-    owner_name: Optional[str] = None
+    vehicle_model: str
+    owner_name: str
     owner_phone_number: Optional[str] = None
-    vehicle_model: Optional[str] = None
-    vehicle_id: str
+    vehicle_id: Optional[str] = None
     service_date: datetime
     service_type: str
     description: Optional[str] = None
-    mileage: int
+    mileage: Optional[int] = 0
     cost: float
     next_service_date: Optional[datetime] = None
-    mechanic_id: Optional[str] = None  # Link to mechanic
+    # you probably added this:
+    mechanic_name: Optional[str] = None   # ← THIS is the problem
