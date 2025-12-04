@@ -10,6 +10,10 @@ from auth_db import Base as AuthBase, engine as auth_engine
 from routers.auth import router as auth_router
 from fastapi.staticfiles import StaticFiles
 
+# 🔹 ML: import the ML service so the model loads at startup
+from services.ml_service import ml_service  # <-- ADDED
+
+
 # ---------- Core setup ----------
 
 repo = Repo(DB_NAME)
@@ -79,6 +83,11 @@ os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Expose service_images as static
 app.mount("/service_images", StaticFiles(directory=IMAGE_DIR), name="service_images")
+
+
+# 🔹 ML: optional sanity log so you know if model is loaded
+if not ml_service.is_ready():  # <-- ADDED
+    print("[ML] Warning: service_cost_model.pkl not loaded. Train or place it under backend/ml/")  # <-- ADDED
 
 
 # ---------- Entrypoint ----------

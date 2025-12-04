@@ -23,4 +23,4 @@ class VehicleServiceLog(BaseModel):
     cost: float
     next_service_date: Optional[datetime] = None
     # you probably added this:
-    mechanic_name: Optional[str] = None   # ← THIS is the problem
+    mechanic_name: Optional[str] = None  

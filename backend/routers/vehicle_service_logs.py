@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 from typing import List, Optional
-
+from pydantic import BaseModel
+from services.ml_service import ml_service
 from models.data_models import VehicleServiceLog
 from services.service import Service
 from repos.repo import Repo
@@ -89,3 +90,40 @@ async def delete_vehicle_service_log(log_id: str):
     Delete a vehicle service log record by ID.
     """
     return await service.delete_vehicle_service_log(log_id)
+
+class CostEstimateRequest(BaseModel):
+    vehicle_model: str
+    service_type: str
+    mileage: int
+    mechanic_name: Optional[str] = None
+
+
+@router.post("/estimate-cost")
+async def estimate_cost(req: CostEstimateRequest):
+    """
+    ML-based service cost estimate.
+
+    Uses:
+    - vehicle_model
+    - service_type
+    - mileage
+    - mechanic_name (optional)
+    """
+    if not ml_service.is_ready():
+        return {
+            "success": False,
+            "message": "ML model not available. Train it first."
+        }
+
+    result = ml_service.estimate_cost(
+        vehicle_model=req.vehicle_model,
+        service_type=req.service_type,
+        mileage=req.mileage,
+        mechanic_name=req.mechanic_name,
+    )
+
+    return {
+        "success": True,
+        "message": "Estimated service cost",
+        "data": result,
+    }
