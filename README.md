@@ -226,4 +226,73 @@ Outputs:
 service_cost_model.pkl
 
 Training logs including R² score.
+Key Agent Tools Exposed to AI
+
+The agent has access to the following backend tools:
+
+get_vehicle_service_logs
+
+add_vehicle_service_log
+
+list_services_by_vehicle
+
+get_vehicles_service_due_soon
+
+update_service_cost_by_vehicle
+
+remove_service_log_by_vehicle
+
+get_total_services_count
+
+get_average_service_cost
+
+get_most_frequent_service_type
+
+get_most_recent_service
+
+get_overdue_services
+
+get_owner_with_most_services
+
+add_mechanic
+
+list_mechanics
+
+get_mechanic_with_most_services
+
+get_total_cost_by_mechanic
+
+upload_service_documentation
+
+get_service_documentation
+
+process_uploaded_service_images
+
+send_service_reminders
+
+get_vehicle_images
+
+These allow the agent to execute actual backend operations.
+
+How the Agent Works (High-Level)
+
+User sends a natural-language request.
+
+Agent parses intent using LLM reasoning.
+
+Agent determines which backend tool is required.
+
+Agent validates inputs.
+
+Agent executes the correct tool.
+
+Agent formats a human-readable response.
+
+This is an operational agent, not a conversational bot.
+
+Conclusion
+
+CarPulse AI combines classical software engineering with modern agentic AI capabilities.
+It automates operations, enhances accuracy, reduces workshop overload, and provides predictive intelligence.
+The system is modular, scalable, and ready for real-world extension into production environments.
 
