@@ -142,4 +142,88 @@ frontend/
         context/
         styles/
     vite.config.js
+    Installation and Running the System
+
+This section shows exactly how to get the entire system running on any development machine.
+
+Backend Setup
+
+Clone the project.
+
+Navigate to backend:
+
+cd backend
+
+
+Create virtual environment:
+
+python -m venv env
+
+
+Activate environment:
+
+Windows:
+
+env\Scripts\activate
+
+
+macOS/Linux:
+
+source env/bin/activate
+
+
+Install dependencies:
+
+pip install -r requirements.txt
+
+
+Run the database initialization automatically (handled by main.py).
+
+Start backend:
+
+uvicorn main:app --reload --port 8080
+
+
+Backend now runs at:
+http://127.0.0.1:8080
+
+Frontend Setup
+
+Navigate to frontend:
+
+cd frontend
+
+
+Install dependencies:
+
+npm install
+
+
+Create .env file:
+
+VITE_API_URL=http://127.0.0.1:8080
+
+
+Start development server:
+
+npm run dev
+
+
+Frontend runs at:
+http://127.0.0.1:5173
+
+Machine Learning Training
+
+The model is located under backend/ml/.
+
+To retrain:
+
+python train_model.py
+
+
+Outputs:
+
+service_cost_model.pkl
+
+Training logs including R² score.
 
