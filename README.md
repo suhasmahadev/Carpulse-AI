@@ -122,3 +122,24 @@ Mechanic dashboard.
 Image viewer for service images.
 
 Dark/Light theme toggle.
+Project Structure
+backend/
+    main.py
+    routers/
+    services/
+    repos/
+    models/
+    ml/
+    service_images/
+    auth_db.py
+
+frontend/
+    src/
+        api/
+        pages/
+        components/
+        config/
+        context/
+        styles/
+    vite.config.js
+
