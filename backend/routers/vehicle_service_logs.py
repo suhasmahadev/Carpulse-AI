@@ -8,7 +8,7 @@ from repos.repo import Repo
 from constants import DB_NAME
 
 router = APIRouter()
-repo = Repo(DB_NAME)
+repo = Repo()
 service = Service(repo)
 
 

@@ -9,7 +9,7 @@ google-adk
 python-dotenv
 python-multipart
 google-api-python-client 
-aiosqlite
+asyncpg
 pandas
 bcrypt==4.0.1 
 passlib[bcrypt]==1.7.4
@@ -18,3 +18,4 @@ pydantic[email]
 scikit-learn
 pandas
 numpy
+twilio

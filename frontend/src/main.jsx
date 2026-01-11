@@ -10,9 +10,10 @@ import ChatPage from "./pages/ChatPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import EstimatePricePage from "./pages/EstimatePricePage.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import './styles/globals.css';
+import './styles/logs.css';
+import './styles/chat.css';
 
-import "./styles/globals.css";
-import "./styles/chat.css";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
