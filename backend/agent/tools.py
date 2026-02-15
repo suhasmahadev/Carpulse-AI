@@ -1,241 +1,234 @@
-import os
-import random
 from typing import Dict, Optional, List
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
-from twilio.rest import Client
+from services.marine_service import MarineService
+from repos.marine_repo import MarineRepo
+from models.data_models import (
+    Vessel,
+    Species,
+    CatchBatch,
+    SpoilagePrediction,
+)
 
-from models.data_models import VehicleServiceLog, Mechanic
-from services.service import Service
-from repos.repo import Repo
+repo = MarineRepo()
+service = MarineService(repo)
 
-repo = Repo()
-service = Service(repo)
 
+# ===================================================
+# UTIL
+# ===================================================
 
 def normalize_dt(dt):
     if dt is None:
         return None
     if isinstance(dt, str):
-        dt = datetime.fromisoformat(dt)
-    if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return datetime.fromisoformat(dt)
     return dt
 
 
-# ---------------- CORE CRUD ---------------- #
+# ===================================================
+# VESSELS
+# ===================================================
 
-async def add_vehicle_service_log(
-    vehicle_model: str,
+async def register_vessel(
+    registration_number: str,
     owner_name: str,
-    owner_phone_number: str,
-    service_type: str,
-    service_date: str,
-    next_service_date: str,
-    service_cost: float,
-    description: str = "",
-    mileage: int = 0,
-    mechanic_name: Optional[str] = None
+    vessel_type: str,
+    capacity_kg: int,
+    home_port: str,
+    owner_phone: Optional[str] = None
 ) -> Dict:
     try:
-        vehicle_id = f"{vehicle_model.replace(' ', '_').lower()}_{random.randint(1000,9999)}"
-
-        log = VehicleServiceLog(
-            vehicle_model=vehicle_model,
+        vessel = Vessel(
+            registration_number=registration_number,
             owner_name=owner_name,
-            owner_phone_number=owner_phone_number,
-            vehicle_id=vehicle_id,
-            service_type=service_type,
-            mechanic_name=mechanic_name,
-            description=description,
-            mileage=mileage,
-            cost=service_cost,
-            service_date=normalize_dt(datetime.strptime(service_date, "%Y-%m-%d")),
-            next_service_date=normalize_dt(datetime.strptime(next_service_date, "%Y-%m-%d")) if next_service_date else None,
+            vessel_type=vessel_type,
+            capacity_kg=capacity_kg,
+            home_port=home_port,
+            owner_phone=owner_phone
         )
 
-        res = await service.create_vehicle_service_log(log)
+        res = await service.create_vessel(vessel)
         return {"success": True, "data": res.dict()}
     except Exception as e:
         return {"success": False, "message": str(e)}
 
 
-async def list_services_by_vehicle(vehicle_model: str) -> Dict:
-    logs = await service.get_services_by_vehicle_model(vehicle_model)
+async def list_all_vessels() -> Dict:
+    vessels = await service.list_vessels()
+    return {"success": True, "data": [v.dict() for v in vessels]}
+
+
+# ===================================================
+# SPECIES
+# ===================================================
+
+async def add_species(
+    name: str,
+    category: str,
+    avg_shelf_life_hours: int,
+    ideal_temp_min: float,
+    ideal_temp_max: float
+) -> Dict:
+    try:
+        species = Species(
+            name=name,
+            category=category,
+            avg_shelf_life_hours=avg_shelf_life_hours,
+            ideal_temp_min=ideal_temp_min,
+            ideal_temp_max=ideal_temp_max
+        )
+
+        res = await service.create_species(species)
+        return {"success": True, "data": res.dict()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def list_all_species() -> Dict:
+    species = await service.list_species()
+    return {"success": True, "data": [s.dict() for s in species]}
+
+
+# ===================================================
+# CATCH MANAGEMENT
+# ===================================================
+
+async def register_catch_batch(
+    vessel_id: str,
+    species_id: str,
+    catch_weight_kg: float,
+    catch_time: str,
+    landing_port: str,
+    current_status: str,
+    ice_applied_time: Optional[str] = None,
+    quality_grade: Optional[str] = None
+) -> Dict:
+    try:
+        batch = CatchBatch(
+            vessel_id=vessel_id,
+            species_id=species_id,
+            catch_weight_kg=catch_weight_kg,
+            catch_time=normalize_dt(catch_time),
+            landing_port=landing_port,
+            ice_applied_time=normalize_dt(ice_applied_time) if ice_applied_time else None,
+            quality_grade=quality_grade,
+            current_status=current_status
+        )
+
+        res = await service.create_catch_batch(batch)
+        return {"success": True, "data": res.dict()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def list_catch_batches(status: Optional[str] = None) -> Dict:
+    batches = await service.get_catch_batches(status)
+    return {"success": True, "data": [b.dict() for b in batches]}
+
+
+# ===================================================
+# AUCTION ANALYTICS
+# ===================================================
+
+async def get_total_auctions() -> Dict:
+    auctions = await service.list_auctions()
+    return {"success": True, "count": len(auctions)}
+
+
+async def get_total_bids_for_auction(auction_id: str) -> Dict:
+    bids = await service.list_bids(auction_id)
+    return {"success": True, "count": len(bids)}
+
+
+# ===================================================
+# SPOILAGE MONITORING
+# ===================================================
+
+async def get_spoilage_prediction(batch_id: str) -> Dict:
+    try:
+        prediction = await service.get_spoilage_by_batch(batch_id)
+        return {"success": True, "data": prediction.dict()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def get_high_risk_batches(threshold: float = 0.7) -> Dict:
+    batches = await service.get_catch_batches(None)
+    high_risk = []
+    errors = []
+
+    for b in batches:
+        try:
+            pred = await service.get_spoilage_by_batch(str(b.id))
+            if pred and pred.predicted_risk >= threshold:
+                high_risk.append({
+                    "batch_id": str(b.id),
+                    "risk": pred.predicted_risk,
+                    "recommended_action": pred.recommended_action
+                })
+        except Exception as e:
+            errors.append({
+                "batch_id": str(b.id),
+                "error": str(e)
+            })
+
+    return {
+        "success": True,
+        "data": high_risk,
+        "errors": errors if errors else None
+    }
+
+
+# ===================================================
+# AUTOMATION: AUTO FLAG HIGH RISK
+# ===================================================
+
+async def auto_flag_high_risk_batches(threshold: float = 0.7) -> Dict:
+    """
+    Automatically:
+    - Detect high spoilage risk
+    - Update batch status to 'high_risk'
+    """
+
+    batches = await service.get_catch_batches(None)
+    flagged = []
+    errors = []
+
+    for b in batches:
+        try:
+            pred = await service.get_spoilage_by_batch(str(b.id))
+
+            if pred and pred.predicted_risk >= threshold:
+                await service.update_catch_status(str(b.id), "high_risk")
+                flagged.append(str(b.id))
+
+        except Exception as e:
+            errors.append({
+                "batch_id": str(b.id),
+                "error": str(e)
+            })
+
+    return {
+        "success": True,
+        "flagged_batches": flagged,
+        "errors": errors if errors else None
+    }
+
+
+# ===================================================
+# STORAGE MONITORING
+# ===================================================
+
+async def get_temperature_logs(storage_id: str) -> Dict:
+    logs = await service.get_temperature_logs(storage_id)
     return {"success": True, "data": [l.dict() for l in logs]}
 
 
-async def get_vehicles_service_due_soon(days: int = 30) -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    today = datetime.utcnow()
-    due = []
+# ===================================================
+# NOTIFICATIONS
+# ===================================================
 
-    for l in logs:
-        if l.next_service_date:
-            ns = normalize_dt(l.next_service_date)
-            if 0 <= (ns - today).days <= days:
-                due.append(l.dict())
-
-    return {"success": True, "data": due}
-
-
-async def update_service_cost_by_vehicle(vehicle_model: str, new_cost: float) -> Dict:
-    success = await service.update_service_cost_by_model(vehicle_model, new_cost)
-    return {"success": success}
-
-
-async def remove_service_log_by_vehicle(vehicle_model: str) -> Dict:
-    success = await service.delete_by_vehicle_model(vehicle_model)
-    return {"success": success}
-
-
-async def get_vehicle_service_logs(vehicle_id: Optional[str] = None) -> Dict:
-    logs = await service.get_vehicle_service_logs(vehicle_id)
+async def list_notifications() -> Dict:
+    logs = await service.list_notifications()
     return {"success": True, "data": [l.dict() for l in logs]}
-
-
-# ---------------- ANALYTICS ---------------- #
-
-async def get_total_services_count() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    return {"count": len(logs)}
-
-
-async def get_average_service_cost() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    return {"average_cost": round(sum(l.cost for l in logs) / len(logs), 2) if logs else 0}
-
-
-async def get_most_frequent_service_type() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    freq = {}
-    for l in logs:
-        freq[l.service_type] = freq.get(l.service_type, 0) + 1
-    return {"most_frequent_type": max(freq, key=freq.get) if freq else None}
-
-
-# ---------------- AUDITING ---------------- #
-
-async def get_most_recent_service() -> Dict:
-    logs = [l for l in await service.get_vehicle_service_logs(None) if l.service_date]
-    if not logs:
-        return {"most_recent_service": None}
-    logs.sort(key=lambda x: x.service_date, reverse=True)
-    return {"most_recent_service": logs[0].dict()}
-
-
-async def get_overdue_services() -> Dict:
-    today = datetime.utcnow()
-    overdue = []
-    for l in await service.get_vehicle_service_logs(None):
-        if l.next_service_date and normalize_dt(l.next_service_date) < today:
-            overdue.append(l.dict())
-    return {"data": overdue}
-
-
-async def get_owner_with_most_services() -> Dict:
-    count = {}
-    for l in await service.get_vehicle_service_logs(None):
-        count[l.owner_name] = count.get(l.owner_name, 0) + 1
-    return {"top_owner": max(count, key=count.get) if count else None}
-
-
-# ---------------- MECHANICS ---------------- #
-
-async def add_mechanic(name: str, specialization: str, contact_number: str, experience_years: int) -> Dict:
-    m = Mechanic(name=name, specialization=specialization, contact_number=contact_number, experience_years=experience_years)
-    res = await service.create_mechanic(m)
-    return {"success": True, "data": res.dict()}
-
-
-async def list_mechanics() -> Dict:
-    mechs = await service.list_mechanics()
-    return {"success": True, "data": [m.dict() for m in mechs]}
-
-
-async def get_mechanic_with_most_services() -> Dict:
-    count = {}
-    for l in await service.get_vehicle_service_logs(None):
-        if l.mechanic_name:
-            count[l.mechanic_name] = count.get(l.mechanic_name, 0) + 1
-    return {"top_mechanic": max(count, key=count.get) if count else None}
-
-
-async def get_total_cost_by_mechanic() -> Dict:
-    stats = {}
-    for l in await service.get_vehicle_service_logs(None):
-        if l.mechanic_name:
-            stats[l.mechanic_name] = stats.get(l.mechanic_name, 0) + l.cost
-    return {"mechanic_costs": stats}
-
-
-# ---------------- IMAGES ---------------- #
-
-IMAGE_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "service_images"))
-
-async def get_vehicle_images(vehicle_id: str) -> Dict:
-    if not os.path.exists(IMAGE_FOLDER):
-        return {"success": False, "data": []}
-    files = [f"/service_images/{f}" for f in os.listdir(IMAGE_FOLDER) if f.startswith(vehicle_id)]
-    return {"success": True, "data": files}
-# ---------------- DOCUMENTATION ---------------- #
-
-async def upload_service_documentation(
-    vehicle_model: str,
-    service_date: str,
-    document_type: str,
-    description: str = ""
-) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "service_date": service_date,
-            "document_type": document_type,
-            "description": description,
-            "uploaded_at": datetime.utcnow().isoformat()
-        }
-    }
-
-
-async def get_service_documentation(vehicle_model: str) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "documents": []
-        }
-    }
-
-
-async def process_uploaded_service_images(
-    vehicle_model: str,
-    image_description: str = ""
-) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "image_description": image_description,
-            "processed_at": datetime.utcnow().isoformat()
-        }
-    }
-
-
-# ---------------- REMINDERS ---------------- #
-
-async def send_service_reminders(days: int = 7) -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    today = datetime.utcnow()
-
-    due = [
-        l for l in logs
-        if l.next_service_date and
-        0 <= (normalize_dt(l.next_service_date) - today).days <= days
-    ]
-
-    return {
-        "success": True,
-        "count": len(due),
-        "vehicles": [l.dict() for l in due]
-    }

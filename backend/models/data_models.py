@@ -1,41 +1,95 @@
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
-from datetime import datetime, timezone
 from uuid import UUID
+from datetime import datetime, date
 
-id: Optional[UUID] = None
+
+class Vessel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    registration_number: str
+    owner_name: str
+    owner_phone: Optional[str] = None
+    vessel_type: str
+    capacity_kg: int
+    home_port: str
+    created_at: Optional[datetime] = None
 
 
-class Mechanic(BaseModel):
+class Species(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: Optional[UUID] = None
     name: str
-    specialization: str
-    contact_number: str
-    experience_years: int
+    category: str
+    avg_shelf_life_hours: int
+    ideal_temp_min: float
+    ideal_temp_max: float
 
 
-class VehicleServiceLog(BaseModel):
+class CatchBatch(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
     id: Optional[UUID] = None
-    vehicle_model: str
-    owner_name: str
-    owner_phone_number: Optional[str] = None
-    vehicle_id: Optional[str] = None
-    service_date: datetime
-    service_type: str
-    description: Optional[str] = None
-    mileage: Optional[int] = 0
-    cost: float
-    next_service_date: Optional[datetime] = None
-    mechanic_name: Optional[str] = None
+    vessel_id: UUID
+    species_id: UUID
+    catch_weight_kg: float
+    catch_time: datetime
+    landing_port: str
+    ice_applied_time: Optional[datetime] = None
+    quality_grade: Optional[str] = None
+    current_status: str
 
-    @field_validator("service_date", "next_service_date", mode="before")
-    @classmethod
-    def normalize_datetime(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, datetime) and v.tzinfo is not None:
-            return v.astimezone(timezone.utc).replace(tzinfo=None)
-        return v
+
+class ColdStorageUnit(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    location: str
+    max_capacity_kg: float
+    current_load_kg: float
+    current_temp: float
+
+
+class TemperatureLog(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    storage_unit_id: UUID
+    recorded_temp: float
+    timestamp: datetime
+
+
+class Auction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    port: str
+    auction_date: date
+    base_price_per_kg: float
+    recommended_price_per_kg: Optional[float] = None
+
+
+class Bid(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    auction_id: UUID
+    buyer_name: str
+    bid_price_per_kg: float
+    quantity_kg: float
+    timestamp: datetime
+
+
+class SpoilagePrediction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    catch_batch_id: UUID
+    predicted_risk: float
+    confidence_score: float
+    recommended_action: str
+    created_at: Optional[datetime] = None
+
+
+class NotificationLog(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[UUID] = None
+    phone_number: str
+    message_type: str
+    message_body: str
+    status: str
+    created_at: Optional[datetime] = None

@@ -5,10 +5,17 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "./App.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import LogsPage from "./pages/LogsPage.jsx";
+import DashboardPage from "./pages/DashboardPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import EstimatePricePage from "./pages/EstimatePricePage.jsx";
+import VesselsPage from "./pages/VesselsPage.jsx";
+import SpeciesPage from "./pages/SpeciesPage.jsx";
+import CatchPage from "./pages/CatchPage.jsx";
+import AuctionsPage from "./pages/AuctionsPage.jsx";
+import StoragePage from "./pages/StoragePage.jsx";
+import AnalyticsPage from "./pages/AnalyticsPage.jsx";
+import NotificationsPage from "./pages/NotificationsPage.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import './styles/globals.css';
 import './styles/logs.css';
@@ -32,10 +39,66 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={<LandingPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route
-              path="logs"
+              path="dashboard"
               element={
                 <ProtectedRoute>
-                  <LogsPage />
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/vessels"
+              element={
+                <ProtectedRoute>
+                  <VesselsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/species"
+              element={
+                <ProtectedRoute>
+                  <SpeciesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/catch"
+              element={
+                <ProtectedRoute>
+                  <CatchPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/auctions"
+              element={
+                <ProtectedRoute>
+                  <AuctionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/storage"
+              element={
+                <ProtectedRoute>
+                  <StoragePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/analytics"
+              element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dashboard/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
                 </ProtectedRoute>
               }
             />

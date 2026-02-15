@@ -12,7 +12,7 @@ class PostgresDB:
         cls.pool = await asyncpg.create_pool(
             user=os.getenv("PG_USER", "postgres"),
             password=os.getenv("PG_PASSWORD", "postgres"),
-            database=os.getenv("PG_DB", "carpulse"),
+            database=os.getenv("PG_DB", "fish"),
             host=os.getenv("PG_HOST", "localhost"),
             port=int(os.getenv("PG_PORT", 5432)),
             min_size=1,

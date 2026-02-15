@@ -15,7 +15,7 @@ export default function Header() {
     <header className="app-header">
       <div className="header-left">
         <span className="logo-icon">
-          <i className="fa-solid fa-car" />
+          <i className="fa-solid fa-ship" />
         </span>
         <span className="logo-text">{APP_NAME}</span>
       </div>
@@ -23,14 +23,14 @@ export default function Header() {
       <nav className="header-nav">
         {isAuthenticated && (
           <>
-            <Link to="/logs" className={isActive("/logs")}>
-              Home
+            <Link to="/dashboard" className={isActive("/dashboard")}>
+              Dashboard
             </Link>
             <Link to="/chat" className={isActive("/chat")}>
-              Chat with Agent
+              Agent Console
             </Link>
             <Link to="/estimate" className={isActive("/estimate")}>
-              Estimate with ML
+              Analytics
             </Link>
           </>
         )}
