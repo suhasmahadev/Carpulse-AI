@@ -1,78 +1,65 @@
-# backend/routers/auth.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from datetime import timedelta
+from typing import Annotated
 
-from auth_db import get_db
-from auth_models import User
-from auth_schemas import Token, UserCreate, UserRead
+from db import get_db
+from models import User
+from auth_schemas import UserCreate, Token, UserResponse
 from auth_security import (
+    authenticate_user,
     create_access_token,
-    decode_access_token,
-    hash_password,
-    verify_password,
+    get_current_user,
+    get_password_hash,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+from fastapi.security import OAuth2PasswordRequestForm
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-
-@router.post("/register", response_model=UserRead)
-def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user_in.email).first()
-    if existing:
+@router.post("/register", response_model=UserResponse)
+def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == user_in.email).first()
+    if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Email already registered",
         )
-
-    user = User(
+    hashed_password = get_password_hash(user_in.password)
+    new_user = User(
         email=user_in.email,
-        hashed_password=hash_password(user_in.password),
+        hashed_password=hashed_password,
         full_name=user_in.full_name,
     )
-    db.add(user)
+    db.add(new_user)
     db.commit()
-    db.refresh(user)
-    return user
-
+    db.refresh(new_user)
+    return new_user
 
 @router.post("/login", response_model=Token)
-def login(user_in: UserCreate, db: Session = Depends(get_db)):
-    """
-    Frontend sends JSON: { "email": "...", "password": "..." }
-    """
-    user = db.query(User).filter(User.email == user_in.email).first()
-    if not user or not verify_password(user_in.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
-
-    token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=token)
-
-
-@router.get("/me", response_model=UserRead)
-def get_me(
-    token: str = Depends(oauth2_scheme),
+def login_for_access_token(
+    form_data: UserCreate, # Using UserCreate body for login as per frontend authApi.js
     db: Session = Depends(get_db),
 ):
-    payload = decode_access_token(token)
-    if not payload or "sub" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
-
-    user_id = int(payload["sub"])
-    user = db.query(User).filter(User.id == user_id).first()
+    # Note: frontend sends JSON body {email, password}, not OAuth2 form data
+    # We should adjust the schema or endpoint to accept JSON.
+    # authApi.js sends: {email, password}
+    
+    user = authenticate_user(db, form_data.email, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-    return user
+@router.get("/me", response_model=UserResponse)
+def read_users_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    return current_user

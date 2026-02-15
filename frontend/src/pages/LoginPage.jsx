@@ -1,133 +1,119 @@
-// src/pages/LoginPage.jsx
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { loginRequest, registerRequest } from "../api/authApi";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Anchor, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
-  const [mode, setMode] = useState("login"); // 'login' or 'register'
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  async function handleSubmit(e) {
+  const handleLogin = (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      if (mode === "register") {
-        // 1) Create user
-        await registerRequest(email, password, fullName || null);
-        // 2) Immediately log in
-      }
-
-      const authRes = await loginRequest(email, password);
-      if (!authRes || !authRes.access_token) {
-        throw new Error("Invalid auth response from server");
-      }
-
-      login(authRes.access_token); // store token in AuthContext + localStorage
-      navigate("/logs", { replace: true });
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Authentication failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const isLogin = mode === "login";
+    // For demo purposes, just navigate to dashboard
+    navigate('/dashboard');
+  };
 
   return (
-    <div className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <h2>{isLogin ? "Sign in to Vehicle Service Log" : "Create your account"}</h2>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-dark)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Background Ambience */}
+      <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03), rgba(0,0,0,0.2))',
+        pointerEvents: 'none'
+      }} />
 
-        {error && <p className="auth-error">{error}</p>}
+      <Link to="/" style={{
+        position: 'absolute',
+        top: '2rem',
+        left: '2rem',
+        color: 'var(--bg-light)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        fontWeight: 500
+      }}>
+        <ArrowLeft size={20} /> Back to Home
+      </Link>
 
-        <label className="auth-field">
-          <span>Email</span>
-          <input
-            type="email"
-            value={email}
-            autoComplete="email"
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-
-        {!isLogin && (
-          <label className="auth-field">
-            <span>Full name (optional)</span>
-            <input
-              type="text"
-              value={fullName}
-              autoComplete="name"
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </label>
-        )}
-
-        <label className="auth-field">
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            autoComplete={isLogin ? "current-password" : "new-password"}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
-
-        <button className="auth-submit" type="submit" disabled={loading}>
-          {loading
-            ? isLogin
-              ? "Signing in..."
-              : "Creating account..."
-            : isLogin
-            ? "Sign in"
-            : "Register"}
-        </button>
-
-        <div className="auth-toggle">
-          {isLogin ? (
-            <p>
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                className="auth-link"
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                }}
-              >
-                Register
-              </button>
-            </p>
-          ) : (
-            <p>
-              Already have an account?{" "}
-              <button
-                type="button"
-                className="auth-link"
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-              >
-                Sign in
-              </button>
-            </p>
-          )}
+      <div style={{
+        background: 'var(--bg-light)',
+        padding: '3rem',
+        borderRadius: 'var(--radius)',
+        width: '100%',
+        maxWidth: '420px',
+        boxShadow: 'var(--shadow-md)',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            display: 'inline-flex',
+            padding: '1rem',
+            background: 'rgba(107, 63, 57, 0.1)',
+            borderRadius: '50%',
+            marginBottom: '1rem',
+            color: 'var(--accent)'
+          }}>
+            <Anchor size={32} />
+          </div>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Welcome Back</h1>
+          <p style={{ color: 'var(--muted)' }}>Sign in to Marine Fishery Dashboard</p>
         </div>
-      </form>
+
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--bg-dark)' }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="captain@marinefishery.com"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid #dcdcdc',
+                background: '#fff',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--bg-dark)' }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid #dcdcdc',
+                background: '#fff',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+            Sign In
+          </button>
+        </form>
+
+        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--muted)' }}>
+          Don't have an account? <span style={{ color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}>Request Access</span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -76,173 +76,259 @@ export default function AnalyticsPage() {
     }
 
     return (
-        <div className="logs-page">
-            <div className="logs-header">
-                <h2>Analytics Dashboard</h2>
-                <p style={{ marginTop: "8px", color: "#666" }}>
-                    Spoilage prediction and price recommendations
-                </p>
-            </div>
 
-            {/* Spoilage Prediction by Batch ID */}
-            <section style={{ marginBottom: "40px" }}>
-                <h3>Spoilage Prediction by Batch ID</h3>
-                <div style={{ marginBottom: "20px" }}>
-                    <input
-                        placeholder="Enter Batch ID"
-                        value={spoilageQuery}
-                        onChange={(e) => setSpoilageQuery(e.target.value)}
-                        style={{ padding: "8px", marginRight: "10px", width: "300px" }}
-                    />
-                    <button className="btn" onClick={handleGetSpoilage}>
-                        Get Spoilage
-                    </button>
+        <div className="logs-page" style={{ padding: "0" }}>
+            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                {/* Header */}
+                <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#3E2723", marginBottom: "0.5rem" }}>
+                        Analytics Dashboard
+                    </h2>
+                    <p style={{ color: "#8D6E63" }}>
+                        AI-driven insights for spoilage and pricing
+                    </p>
                 </div>
-                {spoilageResult && (
-                    <div
-                        style={{
-                            padding: "15px",
-                            border: "1px solid #ddd",
-                            borderRadius: "8px",
-                            marginBottom: "20px",
-                        }}
-                    >
-                        {spoilageResult.error ? (
-                            <p style={{ color: "red" }}>Error: {spoilageResult.error}</p>
-                        ) : (
-                            <>
-                                <p>
-                                    <strong>Risk:</strong> {spoilageResult.predicted_risk}
-                                </p>
-                                <p>
-                                    <strong>Confidence:</strong> {spoilageResult.confidence_score}
-                                </p>
-                                <p>
-                                    <strong>Action:</strong> {spoilageResult.recommended_action}
-                                </p>
-                            </>
-                        )}
-                    </div>
-                )}
-            </section>
 
-            {/* Evaluate Spoilage (ML) */}
-            <section style={{ marginBottom: "40px" }}>
-                <h3>Evaluate Spoilage (ML)</h3>
-                <form onSubmit={handleEvaluateSpoilage} style={{ marginBottom: "20px" }}>
-                    <div className="form-group">
-                        <label>Catch Batch ID *</label>
-                        <input
-                            required
-                            value={evalForm.catch_batch_id}
-                            onChange={(e) => setEvalForm({ ...evalForm, catch_batch_id: e.target.value })}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Avg Temperature (°C) *</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            required
-                            value={evalForm.avg_temperature}
-                            onChange={(e) => setEvalForm({ ...evalForm, avg_temperature: e.target.value })}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Hours Since Catch *</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            required
-                            value={evalForm.hours_since_catch}
-                            onChange={(e) => setEvalForm({ ...evalForm, hours_since_catch: e.target.value })}
-                        />
-                    </div>
-                    <button type="submit" className="btn">
-                        Evaluate
-                    </button>
-                </form>
-                {evalResult && (
-                    <div
-                        style={{
-                            padding: "15px",
-                            border: "1px solid #ddd",
-                            borderRadius: "8px",
-                            marginBottom: "20px",
-                        }}
-                    >
-                        {evalResult.error ? (
-                            <p style={{ color: "red" }}>Error: {evalResult.error}</p>
-                        ) : (
-                            <pre>{JSON.stringify(evalResult, null, 2)}</pre>
-                        )}
-                    </div>
-                )}
-            </section>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) minmax(300px, 1fr)', gap: '24px' }}>
 
-            {/* Recommend Auction Price (ML) */}
-            <section>
-                <h3>Recommend Auction Price (ML)</h3>
-                <form onSubmit={handleRecommendPrice}>
-                    <div className="form-group">
-                        <label>Species Name *</label>
-                        <input
-                            required
-                            value={priceForm.species_name}
-                            onChange={(e) => setPriceForm({ ...priceForm, species_name: e.target.value })}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Catch Weight (kg) *</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            required
-                            value={priceForm.catch_weight_kg}
-                            onChange={(e) => setPriceForm({ ...priceForm, catch_weight_kg: e.target.value })}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Recent Avg Price *</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            required
-                            value={priceForm.recent_avg_price}
-                            onChange={(e) => setPriceForm({ ...priceForm, recent_avg_price: e.target.value })}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Demand Index *</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            required
-                            value={priceForm.demand_index}
-                            onChange={(e) => setPriceForm({ ...priceForm, demand_index: e.target.value })}
-                        />
-                    </div>
-                    <button type="submit" className="btn">
-                        Recommend Price
-                    </button>
-                </form>
-                {priceResult && (
-                    <div
-                        style={{
-                            padding: "15px",
-                            border: "1px solid #ddd",
-                            borderRadius: "8px",
-                            marginTop: "20px",
-                        }}
-                    >
-                        {priceResult.error ? (
-                            <p style={{ color: "red" }}>Error: {priceResult.error}</p>
-                        ) : (
-                            <pre>{JSON.stringify(priceResult, null, 2)}</pre>
+                    {/* Spoilage Prediction Card */}
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        padding: "2rem",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                        border: "1px solid rgba(0,0,0,0.05)",
+                        gridColumn: 'span 2'
+                    }}>
+                        <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#4B2E2B", marginBottom: "1.5rem", display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <i className="fa-solid fa-magnifying-glass-chart" /> Spoilage Prediction by Batch
+                        </h3>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <input
+                                placeholder="Enter Catch Batch ID (UUID)"
+                                value={spoilageQuery}
+                                onChange={(e) => setSpoilageQuery(e.target.value)}
+                                style={{
+                                    flex: 1,
+                                    padding: "12px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #EAEAEA",
+                                    outline: "none",
+                                    fontSize: "0.95rem",
+                                    background: "#FAFAFA"
+                                }}
+                            />
+                            <button
+                                onClick={handleGetSpoilage}
+                                className="btn"
+                                style={{
+                                    background: "#6B3E2E",
+                                    color: "#fff",
+                                    padding: "12px 20px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    fontWeight: 600,
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Analyze
+                            </button>
+                        </div>
+                        {spoilageResult && (
+                            <div style={{
+                                marginTop: "20px",
+                                padding: "15px",
+                                background: spoilageResult.error ? "#FFEBEE" : "#F1F8E9",
+                                borderRadius: "8px",
+                                border: spoilageResult.error ? "1px solid #FFCDD2" : "1px solid #DCEDC8"
+                            }}>
+                                {spoilageResult.error ? (
+                                    <p style={{ color: "#D32F2F", margin: 0 }}>Error: {spoilageResult.error}</p>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <strong>Risk Level:</strong>
+                                            <span style={{ fontWeight: 700, color: spoilageResult.predicted_risk === 'High' ? '#D32F2F' : '#388E3C' }}>{spoilageResult.predicted_risk}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <strong>Confidence:</strong>
+                                            <span>{(spoilageResult.confidence_score * 100).toFixed(1)}%</span>
+                                        </div>
+                                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                                            <strong>Recommendation:</strong> {spoilageResult.recommended_action}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
-                )}
-            </section>
+
+                    {/* Evaluate Spoilage (ML) Card */}
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        padding: "2rem",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                        border: "1px solid rgba(0,0,0,0.05)"
+                    }}>
+                        <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#4B2E2B", marginBottom: "1.5rem" }}>
+                            Evaluate New Data
+                        </h3>
+                        <form onSubmit={handleEvaluateSpoilage}>
+                            <div className="form-group" style={{ marginBottom: "15px" }}>
+                                <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                    Batch ID <span style={{ color: "#D32F2F" }}>*</span>
+                                </label>
+                                <input
+                                    required
+                                    value={evalForm.catch_batch_id}
+                                    onChange={(e) => setEvalForm({ ...evalForm, catch_batch_id: e.target.value })}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                        Avg Temp (°C)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        required
+                                        value={evalForm.avg_temperature}
+                                        onChange={(e) => setEvalForm({ ...evalForm, avg_temperature: e.target.value })}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                        Hours Since Catch
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        required
+                                        value={evalForm.hours_since_catch}
+                                        onChange={(e) => setEvalForm({ ...evalForm, hours_since_catch: e.target.value })}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                type="submit"
+                                className="btn"
+                                style={{
+                                    width: "100%",
+                                    marginTop: "20px",
+                                    background: "#4B2E2B",
+                                    color: "#fff",
+                                    padding: "12px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    fontWeight: 600,
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Run Evaluation
+                            </button>
+                        </form>
+                        {evalResult && (
+                            <div style={{ marginTop: "15px", padding: "10px", background: "#F5F5F5", borderRadius: "8px", fontSize: '0.9rem' }}>
+                                <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{JSON.stringify(evalResult, null, 2)}</pre>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Price Recommendation (ML) Card */}
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        padding: "2rem",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                        border: "1px solid rgba(0,0,0,0.05)"
+                    }}>
+                        <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#4B2E2B", marginBottom: "1.5rem" }}>
+                            Price Recommender
+                        </h3>
+                        <form onSubmit={handleRecommendPrice}>
+                            <div className="form-group" style={{ marginBottom: "15px" }}>
+                                <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                    Species Name <span style={{ color: "#D32F2F" }}>*</span>
+                                </label>
+                                <input
+                                    required
+                                    value={priceForm.species_name}
+                                    onChange={(e) => setPriceForm({ ...priceForm, species_name: e.target.value })}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                        Weight (kg)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        required
+                                        value={priceForm.catch_weight_kg}
+                                        onChange={(e) => setPriceForm({ ...priceForm, catch_weight_kg: e.target.value })}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                        Recent Price
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        required
+                                        value={priceForm.recent_avg_price}
+                                        onChange={(e) => setPriceForm({ ...priceForm, recent_avg_price: e.target.value })}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label style={{ fontWeight: 600, color: "#5D4037", marginBottom: "8px", display: "block" }}>
+                                    Demand Index (0-10) <span style={{ color: "#D32F2F" }}>*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    required
+                                    value={priceForm.demand_index}
+                                    onChange={(e) => setPriceForm({ ...priceForm, demand_index: e.target.value })}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #EAEAEA", outline: "none", background: "#FAFAFA" }}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="btn"
+                                style={{
+                                    width: "100%",
+                                    marginTop: "20px",
+                                    background: "#4B2E2B",
+                                    color: "#fff",
+                                    padding: "12px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    fontWeight: 600,
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Get Price
+                            </button>
+                        </form>
+                        {priceResult && (
+                            <div style={{ marginTop: "15px", padding: "10px", background: "#F5F5F5", borderRadius: "8px", fontSize: '0.9rem' }}>
+                                <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{JSON.stringify(priceResult, null, 2)}</pre>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

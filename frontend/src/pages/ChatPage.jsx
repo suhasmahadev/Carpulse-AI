@@ -1,5 +1,6 @@
 // src/pages/ChatPage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   listSessions,
   createSession,
@@ -9,6 +10,22 @@ import {
   uploadFile,
   BASE_URL,
 } from "../api/chatApi";
+import {
+  Mic,
+  Paperclip,
+  Send,
+  Plus,
+  MessageSquare,
+  Bot,
+  Anchor,
+  Search,
+  Trash2,
+  X,
+  FileText,
+  Image as ImageIcon
+} from "lucide-react";
+
+// --- Helper Functions ---
 
 function mapEventsToMessages(events = []) {
   const msgs = [];
@@ -64,7 +81,8 @@ async function fileToInlineData(file) {
     reader.readAsDataURL(file);
   });
 }
-// imports...
+
+// --- Components ---
 
 function ChatMessageText({ text }) {
   if (!text) return null;
@@ -81,22 +99,21 @@ function ChatMessageText({ text }) {
     if (path.startsWith("http://") || path.startsWith("https://")) {
       return path;
     }
-    // path like /service_images/xxx.png
     return `${BASE_URL}${path}`;
   };
 
   return (
-    <div className="chat-bubble-text">
-      {cleanedText && <p>{cleanedText}</p>}
+    <div className="chat-content">
+      {cleanedText && <p style={{ lineHeight: 1.6 }}>{cleanedText}</p>}
 
       {matches.length > 0 && (
-        <div className="chat-inline-images">
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
           {matches.map((src, idx) => (
             <img
               key={idx}
               src={toAbsoluteUrl(src)}
               alt={`Service Image ${idx + 1}`}
-              className="chat-inline-image"
+              style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid #E0D2C2' }}
             />
           ))}
         </div>
@@ -120,6 +137,16 @@ export default function ChatPage() {
   const [recognition, setRecognition] = useState(null);
   const [isListening, setIsListening] = useState(false);
 
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   // Load sessions + first session
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +165,8 @@ export default function ChatPage() {
           if (!cancelled) {
             setMessages(mapEventsToMessages(full.events));
           }
+        } else {
+          handleNewSession();
         }
       } catch (err) {
         console.error("Failed to load sessions:", err);
@@ -235,6 +264,7 @@ export default function ChatPage() {
         } else {
           setActiveSessionId(null);
           setMessages([]);
+          handleNewSession(); // Auto create new if empty
         }
       }
     } catch (err) {
@@ -317,11 +347,11 @@ export default function ChatPage() {
       text: text || (fileForInline ? `Sent file: ${fileForInline.name}` : ""),
       attachments: fileForInline
         ? [
-            {
-              displayName: fileForInline.name,
-              mimeType: fileForInline.type,
-            },
-          ]
+          {
+            displayName: fileForInline.name,
+            mimeType: fileForInline.type,
+          },
+        ]
         : [],
     };
 
@@ -407,165 +437,286 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="chat-layout">
-      {/* Sidebar */}
-      <aside className="chat-sidebar">
-        <div className="chat-sidebar-header">
-          <div>
-            <h3>Agent Sessions</h3>
-            <p>Each session keeps its own service context.</p>
-          </div>
-          <button
-            type="button"
-            className="btn-primary btn-small"
-            onClick={handleNewSession}
-          >
-            + New
-          </button>
-        </div>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-light)', fontFamily: "'Inter', sans-serif" }}>
+      {/* Inner Sidebar removed to avoid duplication */}
 
-        <div className="chat-sessions-list">
-          {sessions.length === 0 ? (
-            <div className="chat-sessions-empty">
-              No sessions yet. Create one to start.
+      {/* Main Content */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+
+        {/* Top Header */}
+        <header style={{
+          height: '72px',
+          padding: '0 2rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(0,0,0,0.03)',
+          background: '#FBF9F5'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: '#4B2E2B',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Bot size={24} color="#F5EFE6" />
             </div>
-          ) : (
-            sessions.map((s) => (
-              <div
-                key={s.id}
-                className={
-                  "chat-session-item" +
-                  (s.id === activeSessionId ? " active" : "")
-                }
-                onClick={() => handleSelectSession(s.id)}
-              >
-                <div className="chat-session-id" title={s.id}>
-                  {s.id}
-                </div>
-                <button
-                  type="button"
-                  className="chat-session-delete"
-                  onClick={(e) => handleDeleteSession(s.id, e)}
-                >
-                  ✕
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </aside>
+            <h1 style={{ fontSize: '1.4rem', color: '#4B2E2B', fontWeight: 700, margin: '0 0 2px 0', fontFamily: "'Poppins', sans-serif" }}>Marine Fishery Agent</h1>
+          </div>
 
-      {/* Chat panel */}
-      <section className="chat-main">
-        {errorMsg && <div className="chat-banner-error">{errorMsg}</div>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              padding: '6px 14px',
+              background: '#F5EFE6',
+              borderRadius: '20px',
+              color: '#6B3E2E',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <Mic size={14} /> Voice Ready
+            </div>
+            <button
+              onClick={handleNewSession}
+              className="btn"
+              style={{
+                background: '#6B3E2E',
+                color: '#fff',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                borderRadius: '10px',
+                fontSize: '0.9rem'
+              }}
+            >
+              <Plus size={16} /> New Session
+            </button>
+          </div>
+        </header>
 
-        <div className="chat-messages">
-         {messages.length === 0 ? (
-  <div className="chat-empty">
-    <h4>Start a conversation</h4>
-    <p>
-      Ask the agent to analyze logs, detect anomalies, or help you 
-      record new service entries.
-    </p>
-  </div>
-) : (
-  messages.map((m, idx) => (
-    <div
-      key={idx}
-      className={
-        "chat-message-row chat-message-" +
-        (m.role === "user" ? "user" : "model")
-      }
-    >
-      <div className="chat-avatar">
-        {m.role === "user" ? "You" : "AI"}
-      </div>
+        {/* Chat Area - Card Container */}
+        <div style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      <div className="chat-bubble">
-        {/* ✅ TEXT + IMAGES */}
-        {m.text && <ChatMessageText text={m.text} />}
+          <div style={{
+            flex: 1,
+            background: '#fff',
+            borderRadius: '16px',
+            border: '1px solid rgba(0,0,0,0.05)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            maxWidth: '1200px',
+            width: '100%',
+            margin: '0 auto'
+          }}>
+            {/* Messages Area */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
 
-        {/* ✅ ATTACHMENTS */}
-        {m.attachments &&
-          m.attachments.map((att, i) => {
-            const mime = att.mimeType || "";
-            const name = att.displayName || att.name || "attachment";
-            return (
-              <div key={i} className="chat-attachment-chip">
-                📎 {name}
-              </div>
-            );
-          })}
-      </div>
-    </div>
-  ))
-)}
-
-        </div>
-
-        {filePreview && (
-          <div className="chat-file-preview">
-            <div className="chat-file-preview-inner">
-              {filePreview.type === "image" ? (
-                <img
-                  src={filePreview.src}
-                  alt={filePreview.name}
-                  className="chat-file-preview-image"
-                />
-              ) : (
-                <div className="chat-file-preview-icon">
-                  📄 {filePreview.name}
+              {/* Welcome / Empty State */}
+              {messages.length === 0 && (
+                <div style={{
+                  display: 'flex',
+                  gap: '16px',
+                  maxWidth: '600px',
+                  margin: '0',
+                  padding: '24px',
+                  border: '1px solid rgba(0,0,0,0.05)',
+                  borderRadius: '16px',
+                  background: '#FAFAFA'
+                }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: '#E8DCCB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#4B2E2B'
+                  }}>
+                    <Bot size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', color: '#4B2E2B', marginBottom: '8px' }}>Marine Fishery Agent</h3>
+                    <p style={{ fontSize: '0.9rem', color: '#666', lineHeight: 1.5 }}>
+                      I'm here to help you manage your vessels, catch batches, and auctions.
+                      Try asking about "spoilage risks" or "active vessels".
+                    </p>
+                  </div>
                 </div>
               )}
-              <button
-                type="button"
-                className="chat-file-preview-remove"
-                onClick={clearFile}
-              >
-                ✕
-              </button>
+
+              {/* Messages Loop */}
+              {messages.map((m, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  gap: '16px',
+                  marginBottom: '24px',
+                  justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start'
+                }}>
+                  {m.role !== 'user' && (
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: '#E8DCCB', // Agent Color
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#4B2E2B',
+                      flexShrink: 0
+                    }}>
+                      <Bot size={18} />
+                    </div>
+                  )}
+
+                  <div style={{
+                    background: m.role === 'user' ? '#F5EFE6' : 'transparent',
+                    padding: m.role === 'user' ? '16px 20px' : '0 10px',
+                    borderRadius: m.role === 'user' ? '20px 20px 0 20px' : '0',
+                    maxWidth: '70%',
+                    color: '#3E2723'
+                  }}>
+                    {/* Attachments */}
+                    {m.attachments && m.attachments.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        {m.attachments.map((att, i) => (
+                          <div key={i} style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#fff',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(0,0,0,0.1)'
+                          }}>
+                            <Paperclip size={12} /> {att.displayName || "Attachment"}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <ChatMessageText text={m.text} />
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div style={{ padding: '24px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+              {filePreview && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  background: '#F5F5F5',
+                  borderRadius: '8px',
+                  width: 'fit-content'
+                }}>
+                  {filePreview.type === 'image' ? (
+                    <ImageIcon size={16} color="#666" />
+                  ) : (
+                    <FileText size={16} color="#666" />
+                  )}
+                  <span style={{ fontSize: '0.85rem', color: '#444' }}>{filePreview.name}</span>
+                  <button onClick={clearFile} style={{ border: 'none', background: 'transparent', cursor: 'pointer', marginLeft: '8px' }}>
+                    <X size={14} color="#999" />
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                background: '#FBF9F5',
+                border: '1px solid #EAEAEA',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.01)'
+              }}>
+                <button
+                  type="button"
+                  onClick={handleVoiceClick}
+                  style={{
+                    border: 'none',
+                    background: isListening ? '#FFEBEE' : '#F0EBE0',
+                    color: isListening ? '#D32F2F' : '#6B3E2E',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Mic size={18} />
+                </button>
+
+                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <input type="file" hidden onChange={handleFileChange} />
+                  <div style={{ color: '#8D6E63' }}><Paperclip size={20} /></div>
+                </label>
+
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask about inventory, sales, or warehouses..."
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '1rem',
+                    color: '#3E2723',
+                    outline: 'none',
+                    padding: '0 8px'
+                  }}
+                />
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    border: 'none',
+                    background: loading ? '#A1887F' : '#8B6B64',
+                    color: '#fff',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: 500
+                  }}
+                >
+                  <Send size={16} /> Send
+                </button>
+              </form>
+              <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem', color: '#9E9E9E' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  AI can make mistakes. Please verify important data.
+                </span>
+              </div>
             </div>
           </div>
-        )}
 
-        <form className="chat-input-row" onSubmit={handleSubmit}>
-          <div className="chat-input-shell">
-            <label className="chat-file-button">
-              📎
-              <input
-                type="file"
-                onChange={handleFileChange}
-                hidden
-              />
-            </label>
-            <button
-              type="button"
-              className={
-                "chat-voice-button" +
-                (isListening ? " listening" : "")
-              }
-              onClick={handleVoiceClick}
-              disabled={!recognition}
-            >
-              🎙
-            </button>
-            <textarea
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message…"
-              className="chat-input"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !activeSessionId}
-            className="btn-primary"
-          >
-            {loading ? "Sending…" : "Send"}
-          </button>
-        </form>
-      </section>
+        </div>
+
+      </main>
     </div>
   );
 }

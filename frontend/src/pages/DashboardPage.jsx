@@ -1,9 +1,24 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Link, useSearchParams } from "react-router-dom";
 import "../styles/logs.css";
+import {
+    Anchor,
+    Fish,
+    Package,
+    Gavel,
+    Warehouse,
+    LineChart,
+    Bell,
+    Brain,
+    ArrowRight,
+    LayoutDashboard,
+    LogOut
+} from "lucide-react";
 
 export default function DashboardPage() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
     const [agentQuery, setAgentQuery] = useState("");
 
     const handleAgentSubmit = (e) => {
@@ -15,93 +30,117 @@ export default function DashboardPage() {
 
     const modules = [
         {
+            title: "Dashboard",
+            description: "Overview of all metrics and active modules",
+            icon: LayoutDashboard,
+            path: "/dashboard",
+        },
+        {
             title: "Vessels",
             description: "Manage fishing vessels, registrations, and owner information",
-            icon: "fa-ship",
+            icon: Anchor,
             path: "/dashboard/vessels",
-            color: "#3b82f6",
         },
         {
             title: "Species",
             description: "Track fish species, categories, and storage requirements",
-            icon: "fa-fish",
+            icon: Fish,
             path: "/dashboard/species",
-            color: "#10b981",
         },
         {
             title: "Catch Batches",
             description: "Monitor catch batches, weights, and quality grades",
-            icon: "fa-box",
+            icon: Package,
             path: "/dashboard/catch",
-            color: "#f59e0b",
         },
         {
             title: "Auctions",
             description: "Manage auctions, bids, and pricing strategies",
-            icon: "fa-gavel",
+            icon: Gavel,
             path: "/dashboard/auctions",
-            color: "#8b5cf6",
         },
         {
             title: "Storage",
             description: "Track storage units, capacity, and temperature logs",
-            icon: "fa-warehouse",
+            icon: Warehouse,
             path: "/dashboard/storage",
-            color: "#06b6d4",
         },
         {
             title: "Analytics",
             description: "Spoilage prediction and price recommendations",
-            icon: "fa-chart-line",
+            icon: LineChart,
             path: "/dashboard/analytics",
-            color: "#ec4899",
         },
         {
             title: "Notifications",
             description: "Send and manage SMS notifications",
-            icon: "fa-bell",
+            icon: Bell,
             path: "/dashboard/notifications",
-            color: "#f97316",
         },
         {
             title: "Agent Console",
             description: "Chat with AI agent for intelligent assistance",
-            icon: "fa-robot",
+            icon: Brain,
             path: "/chat",
-            color: "#6366f1",
         },
     ];
 
+    // Filter out Dashboard item for the Grid view (keep others)
+    const searchTerm = searchParams.get("q")?.toLowerCase() || "";
+
+    const gridModules = modules.filter(m => {
+        const matchesType = m.path !== "/dashboard";
+        const matchesSearch = m.title.toLowerCase().includes(searchTerm) ||
+            m.description.toLowerCase().includes(searchTerm);
+        return matchesType && matchesSearch;
+    });
+
     return (
-        <div className="logs-page">
-            <div className="logs-header">
-                <h2>Marine Fishery Management Dashboard</h2>
-                <p style={{ marginTop: "8px", color: "#666" }}>
-                    Centralized control panel for all fishery operations
-                </p>
-            </div>
+        <div style={{ height: '100%' }}>
+
+            {/* Header Removed as per request */}
+
+
 
             {/* Agent Input Capsule */}
             <div
                 style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    borderRadius: "12px",
+                    background: '#4B2E2B',
+                    borderRadius: "16px",
                     padding: "24px",
-                    marginBottom: "32px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    marginBottom: "3rem",
+                    boxShadow: "0 8px 30px rgba(75, 46, 43, 0.15)",
+                    position: 'relative',
+                    overflow: 'hidden'
                 }}
             >
+                {/* Decorative background element */}
+                <div style={{
+                    position: 'absolute',
+                    top: '-50%',
+                    right: '-10%',
+                    width: '300px',
+                    height: '300px',
+                    borderRadius: '50%',
+                    background: 'rgba(232, 220, 203, 0.05)',
+                    pointerEvents: 'none'
+                }} />
+
                 <form onSubmit={handleAgentSubmit}>
                     <label
                         htmlFor="agent-query"
                         style={{
                             display: "block",
-                            color: "white",
+                            color: "#E8DCCB",
                             fontWeight: "600",
                             marginBottom: "12px",
-                            fontSize: "16px",
+                            fontSize: "1.1rem",
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
                         }}
                     >
+                        <Brain size={20} />
                         Ask the Marine Agent
                     </label>
                     <div style={{ display: "flex", gap: "12px" }}>
@@ -113,26 +152,26 @@ export default function DashboardPage() {
                             placeholder="e.g., What's the status of my latest catch batch?"
                             style={{
                                 flex: 1,
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "none",
-                                fontSize: "15px",
+                                padding: "16px 24px",
+                                borderRadius: "12px",
+                                border: "1px solid #6B3E2E",
+                                fontSize: "16px",
                                 outline: "none",
+                                background: "#2A2422",
+                                color: "#F5EFE6",
+                                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)"
                             }}
                         />
                         <button
                             type="submit"
                             className="btn"
                             style={{
-                                background: "white",
-                                color: "#667eea",
-                                fontWeight: "600",
-                                padding: "12px 24px",
-                                border: "none",
-                                cursor: "pointer",
+                                background: "#E8DCCB",
+                                color: "#4B2E2B",
+                                padding: "0 32px",
+                                fontSize: "1rem"
                             }}
                         >
-                            <i className="fa-solid fa-paper-plane" style={{ marginRight: "8px" }} />
                             Ask
                         </button>
                     </div>
@@ -140,86 +179,70 @@ export default function DashboardPage() {
             </div>
 
             {/* Module Cards Grid */}
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                    gap: "20px",
-                    marginTop: "24px",
-                }}
-            >
-                {modules.map((module) => (
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '24px'
+            }}>
+                {gridModules.map((module) => (
                     <div
                         key={module.path}
                         onClick={() => navigate(module.path)}
                         style={{
-                            background: "white",
-                            borderRadius: "12px",
-                            padding: "24px",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                            transition: "all 0.3s ease",
-                            border: "1px solid #e5e7eb",
-                            position: "relative",
-                            overflow: "hidden",
+                            background: '#fff',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                            border: '1px solid rgba(0,0,0,0.03)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            minHeight: '220px',
+                            transition: 'all 0.3s ease',
+                            position: 'relative',
+                            overflow: 'hidden'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-4px)";
-                            e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.12)";
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
                         }}
                     >
-                        <div
-                            style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "10px",
-                                background: module.color,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                marginBottom: "16px",
-                            }}
-                        >
-                            <i
-                                className={`fa-solid ${module.icon}`}
-                                style={{ color: "white", fontSize: "20px" }}
-                            />
+                        <div>
+                            <div style={{
+                                width: '48px',
+                                height: '48px',
+                                background: '#F5EFE6',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '1.5rem',
+                                color: '#4B2E2B'
+                            }}>
+                                <module.icon size={24} strokeWidth={1.5} />
+                            </div>
+                            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.75rem', color: '#1C1715' }}>{module.title}</h3>
+                            <p style={{ fontSize: '0.9rem', color: '#8B6B64', lineHeight: 1.5, marginBottom: '2rem' }}>
+                                {module.description}
+                            </p>
                         </div>
-                        <h3
-                            style={{
-                                margin: "0 0 8px 0",
-                                fontSize: "18px",
-                                fontWeight: "600",
-                                color: "#111827",
-                            }}
-                        >
-                            {module.title}
-                        </h3>
-                        <p
-                            style={{
-                                margin: 0,
-                                fontSize: "14px",
-                                color: "#6b7280",
-                                lineHeight: "1.5",
-                            }}
-                        >
-                            {module.description}
-                        </p>
-                        <div
-                            style={{
-                                position: "absolute",
-                                bottom: "12px",
-                                right: "12px",
-                                color: module.color,
-                                opacity: 0.3,
-                                fontSize: "12px",
-                            }}
-                        >
-                            <i className="fa-solid fa-arrow-right" />
+
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            letterSpacing: '1px',
+                            color: '#8B6B64',
+                            textTransform: 'uppercase'
+                        }}>
+                            ACCESS MODULE <ArrowRight size={14} />
                         </div>
                     </div>
                 ))}
