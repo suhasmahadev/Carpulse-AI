@@ -19,3 +19,5 @@ scikit-learn
 pandas
 numpy
 twilio
+qdrant-client 
+sentence-transformers

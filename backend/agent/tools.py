@@ -8,6 +8,9 @@ from twilio.rest import Client
 from models.data_models import VehicleServiceLog, Mechanic
 from services.service import Service
 from repos.repo import Repo
+from vector_store.qdrant_service import QdrantService
+
+qdrant = QdrantService()
 
 repo = Repo()
 service = Service(repo)
@@ -238,4 +241,16 @@ async def send_service_reminders(days: int = 7) -> Dict:
         "success": True,
         "count": len(due),
         "vehicles": [l.dict() for l in due]
+    }
+async def semantic_search_services(query: str) -> dict:
+    results = qdrant.semantic_search(query)
+
+    return {
+        "query": query,
+        "matches": [
+            {
+                "score": hit.score,
+                "payload": hit.payload
+            } for hit in results
+        ]
     }
