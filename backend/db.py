@@ -1,5 +1,9 @@
 import asyncpg
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class PostgresDB:
     pool: asyncpg.Pool | None = None
@@ -18,9 +22,3 @@ class PostgresDB:
             min_size=1,
             max_size=5
         )
-import os
-print("PG_USER =", os.getenv("PG_USER"))
-print("PG_PASSWORD =", os.getenv("PG_PASSWORD"))
-print("PG_DB =", os.getenv("PG_DB"))
-print("PG_HOST =", os.getenv("PG_HOST"))
-print("PG_PORT =", os.getenv("PG_PORT"))

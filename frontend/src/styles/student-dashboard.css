@@ -1,0 +1,804 @@
+/* ============================================================
+   Student, Faculty & HOD Dashboards
+   Orange + White Glassmorphic Design System
+   ============================================================ */
+
+/* ── Layout ── */
+.sd-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: transparent;
+  color: #000000;
+  font-family: 'Inter', 'Poppins', sans-serif;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sd-sidebar {
+  width: 260px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  z-index: 100;
+  flex-shrink: 0;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Student Logo ── */
+.sd-logo {
+  padding: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: linear-gradient(90deg, #FF5A1F, #FF7A00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sd-logo i {
+  -webkit-text-fill-color: initial;
+  color: #FF5A1F;
+}
+
+/* ── HOD Logo (same orange, different icon handled in JSX) ── */
+.hd-logo {
+  padding: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: linear-gradient(90deg, #FF5A1F, #FF7A00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hd-logo i {
+  -webkit-text-fill-color: initial;
+  color: #FF7A00;
+}
+
+/* ── Nav ── */
+.sd-nav {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+}
+
+.sd-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  color: #4B5563;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.sd-nav-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.sd-nav-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000000;
+}
+
+/* Student active */
+.sd-nav-item.active {
+  background: linear-gradient(90deg, rgba(255, 90, 31, 0.10), rgba(255, 122, 0, 0.04));
+  color: #FF5A1F;
+  border-left: 3px solid #FF5A1F;
+  font-weight: 600;
+}
+
+/* HOD active — same orange palette */
+.hd-nav-item.active {
+  background: linear-gradient(90deg, rgba(255, 122, 0, 0.10), rgba(255, 90, 31, 0.04));
+  color: #FF7A00;
+  border-left: 3px solid #FF7A00;
+  font-weight: 600;
+}
+
+/* ── Main Content Area ── */
+.sd-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+}
+
+/* ── Topbar ── */
+.sd-topbar {
+  height: 70px;
+  min-height: 70px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 50;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.sd-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sd-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.sd-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Student avatar */
+.sd-avatar {
+  background: linear-gradient(135deg, #FF5A1F, #FF7A00);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(255, 90, 31, 0.3);
+}
+
+/* HOD avatar */
+.hd-avatar {
+  background: linear-gradient(135deg, #FF7A00, #FF5A1F);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+}
+
+.sd-logout-btn {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #EF4444;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.sd-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.07);
+  color: #DC2626;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.mobile-sd-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #000000;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* ── Page Content ── */
+.sd-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background: transparent;
+}
+
+/* ── Page Header ── */
+.sd-page-header {
+  margin-bottom: 2rem;
+}
+
+.sd-page-header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+  background: none;
+}
+
+.sd-page-header p {
+  color: #4B5563;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+/* ── Cards ── */
+.sd-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sd-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 90, 31, 0.06);
+}
+
+.sd-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.sd-card-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  color: #000000;
+}
+
+.sd-card-header i {
+  color: #FF5A1F;
+  font-size: 1.2rem;
+}
+
+/* HOD card header icon */
+.hd-card-header i {
+  color: #FF7A00;
+  font-size: 1.2rem;
+}
+
+/* ── Grids ── */
+.sd-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+.sd-grid-1 { grid-template-columns: 1fr; }
+.sd-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.sd-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.sd-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ── Stat Cards ── */
+.sd-stat-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-top: 3px solid #FF5A1F;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sd-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.sd-stat-label {
+  color: #4B5563;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sd-stat-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #000000;
+  line-height: 1.2;
+}
+
+/* ── Forms & Inputs ── */
+.sd-form-group {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sd-form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4B5563;
+}
+
+.sd-input,
+.sd-select,
+.sd-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  color: #000000;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.sd-input:focus,
+.sd-select:focus,
+.sd-textarea:focus {
+  border-color: #FF5A1F;
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.15);
+}
+
+.sd-input::placeholder,
+.sd-textarea::placeholder {
+  color: #9CA3AF;
+}
+
+.sd-select option {
+  background: #ffffff;
+  color: #000000;
+}
+
+.sd-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ── Buttons ── */
+.sd-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Student primary — orange */
+.sd-btn-primary {
+  background: linear-gradient(135deg, #FF5A1F, #FF7A00);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 90, 31, 0.35);
+}
+
+.sd-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e8501c, #e86f00);
+  box-shadow: 0 6px 20px rgba(255, 90, 31, 0.45);
+  transform: translateY(-1px);
+}
+
+/* HOD primary — slightly deeper orange */
+.hd-btn-primary {
+  background: linear-gradient(135deg, #FF7A00, #FF5A1F);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 122, 0, 0.35);
+}
+
+.hd-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e86f00, #e8501c);
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.sd-btn-danger {
+  background: #EF4444;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.sd-btn-danger:hover:not(:disabled) {
+  background: #DC2626;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+}
+
+.sd-btn-secondary {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.sd-btn-secondary:hover:not(:disabled) {
+  background: #F8F9FB;
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.sd-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Tables ── */
+.sd-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.sd-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.sd-table th,
+.sd-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sd-table th {
+  background: rgba(248, 249, 251, 0.85);
+  color: #4B5563;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sd-table td {
+  color: #000000;
+  font-size: 0.9rem;
+}
+
+.sd-table tbody tr:hover td {
+  background: rgba(255, 90, 31, 0.03);
+}
+
+.sd-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Badges ── */
+.sd-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.sd-badge-success { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.sd-badge-danger  { background: rgba(239, 68, 68, 0.12);  color: #DC2626; }
+.sd-badge-warning { background: rgba(255, 90, 31, 0.12);  color: #FF5A1F; }
+.sd-badge-info    { background: rgba(255, 90, 31, 0.10);   color: #FF5A1F; }  /* info = orange in this theme */
+
+/* ── Alert Banners ── */
+.sd-alert-banner {
+  background: rgba(254, 242, 242, 0.85);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-left: 4px solid #EF4444;
+  border-radius: 8px;
+  color: #DC2626;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(8px);
+  animation: sd-pulse-border 2s infinite;
+}
+
+.sd-alert-warning {
+  background: rgba(255, 247, 237, 0.85);
+  border: 1px solid rgba(255, 90, 31, 0.18);
+  border-left: 4px solid #FF5A1F;
+  border-radius: 8px;
+  color: #FF5A1F;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes sd-pulse-border {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.25); }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ── Subject Pills ── */
+.sd-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.sd-pill {
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.75);
+  color: #4B5563;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.sd-pill:hover {
+  background: rgba(255, 90, 31, 0.06);
+  color: #FF5A1F;
+  border-color: rgba(255, 90, 31, 0.25);
+}
+
+.sd-pill.active {
+  background: rgba(255, 90, 31, 0.12);
+  color: #FF5A1F;
+  border-color: rgba(255, 90, 31, 0.35);
+  font-weight: 600;
+}
+
+/* HOD pills — same orange */
+.hd-pill.active {
+  background: rgba(255, 122, 0, 0.12);
+  color: #FF7A00;
+  border-color: rgba(255, 122, 0, 0.35);
+  font-weight: 600;
+}
+
+/* ── Analytics Overview ── */
+.sd-analytics-band {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.sd-analytics-big {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #000000;
+}
+
+/* ── Loading & Spinner ── */
+.sd-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.sd-spinner {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid rgba(0, 0, 0, 0.08);
+  border-top-color: #FF5A1F;
+  border-radius: 50%;
+  animation: sd-spin 0.8s linear infinite;
+}
+
+.hd-spinner {
+  border-top-color: #FF7A00;
+}
+
+@keyframes sd-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Notification Items ── */
+.sd-notification-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #FF5A1F;
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: background 0.2s;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.sd-notification-item:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.sd-notification-item i {
+  color: #FF5A1F;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.hd-notification-item {
+  border-left: 3px solid #FF7A00;
+}
+
+.hd-notification-item i {
+  color: #FF7A00;
+}
+
+/* ── IA Marks Card ── */
+.sd-ia-card {
+  flex: 1 1 220px;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sd-ia-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.11);
+}
+
+.sd-progress-bar-bg {
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.sd-progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+/* ── Empty State ── */
+.sd-empty-state {
+  text-align: center;
+  color: #6B7280;
+  font-style: italic;
+  padding: 2.5rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* ── Drilldown Panel ── */
+.sd-drilldown-panel {
+  margin-top: 1.25rem;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Results ── */
+.sd-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.sd-result-item {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.sd-result-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #4B5563;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.5rem;
+}
+
+.sd-result-value {
+  display: block;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #FF5A1F;
+}
+
+/* ── HOD Table Active Row ── */
+.hd-table-row-active {
+  background: rgba(255, 90, 31, 0.04) !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .sd-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .sd-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .mobile-sd-menu-btn { display: block; }
+  .sd-sidebar {
+    position: absolute;
+    left: -260px;
+    height: 100%;
+    transition: left 0.3s ease;
+  }
+  .sd-sidebar.open { left: 0; }
+  .sd-grid-2,
+  .sd-grid-3,
+  .sd-grid-4 { grid-template-columns: 1fr; }
+  .sd-topbar { padding: 0 1rem; }
+  .sd-content { padding: 1rem; }
+  .sd-result-grid { grid-template-columns: 1fr; }
+}

@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,12 +10,36 @@ from google.adk.cli.fast_api import get_fast_api_app
 
 from services.service import Service
 from repos.repo import Repo
-from routers import vehicle_service_logs, mechanics, file_upload, voice
-from auth_db import Base as AuthBase, engine as auth_engine
+from routers import vehicle_service_logs, mechanics, file_upload, voice, agent_chat
 from routers.auth import router as auth_router
-from services.ml_service import ml_service
+from routers.intelligence import router as intelligence_router
+from routers import student_planner
 from contextlib import asynccontextmanager
 from db import PostgresDB
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import json
+
+async def daily_planner_notifications():
+    async with PostgresDB.pool.acquire() as conn:
+        # Find students who have incomplete tasks for today (mocking today for simplicity)
+        # We would ideally match today's day with the plan's day, but for a simplified
+        # production-ready model, we just remind everyone who has active plans
+        plans = await conn.fetch("SELECT student_id FROM student_plans")
+        for p in plans:
+            sid = p["student_id"]
+            import uuid
+            nid = f"notif_{uuid.uuid4().hex}"
+            try:
+                await conn.execute(
+                    "INSERT INTO notifications (id, sender_id, receiver_id, message, type) VALUES ($1, $2, $3, $4, $5)",
+                    nid, "system", sid, "Remember to check your AI Student Planner and complete your daily goals!", "planner_reminder"
+                )
+            except Exception as e:
+                print(f"Failed to insert notification: {e}")
+
+scheduler = AsyncIOScheduler()
+scheduler.add_job(daily_planner_notifications, 'cron', hour=8, minute=0)
+
 
 AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,87 +55,243 @@ SERVE_WEB_INTERFACE = True
 repo = Repo()
 service = Service(repo)
 
-AuthBase.metadata.create_all(bind=auth_engine)
-
 app = get_fast_api_app(
     agents_dir=AGENT_DIR,
-    allow_origins=[],
+    allow_origins=ALLOWED_ORIGINS,
     web=SERVE_WEB_INTERFACE,
 )
 
+# Single CORS middleware — overrides ADK's internal CORS to ensure all browsers can reach all endpoints
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(auth_router)
 
+
 app.include_router(
     vehicle_service_logs.router,
-    prefix="/vehicle_service_logs",
-    tags=["VehicleServiceLogs"],
+    prefix="/academic",
+    tags=["Academic"],
 )
 
 app.include_router(
     mechanics.router,
-    prefix="/vehicle_service_logs/api/mechanics",
-    tags=["mechanics"],
+    prefix="/academic/manage",
+    tags=["AcademicManagement"],
 )
 
 app.include_router(
     file_upload.router,
-    prefix="/vehicle_service_logs/api/files",
+    prefix="/academic/api/files",
     tags=["files"],
 )
 
 app.include_router(
     voice.router,
-    prefix="/vehicle_service_logs/api/voice",
+    prefix="/academic/api/voice",
     tags=["voice"],
 )
+
+app.include_router(
+    agent_chat.router,
+    prefix="/agent",
+    tags=["Agent Chat"],
+)
+
+app.include_router(
+    intelligence_router,
+    prefix="/academic",
+    tags=["Intelligence"],
+)
+
+app.include_router(student_planner.router)
+
 
 IMAGE_DIR = os.path.join(AGENT_DIR, "service_images")
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 app.mount("/service_images", StaticFiles(directory=IMAGE_DIR), name="service_images")
 
-if not ml_service.is_ready():
-    print("[ML] Warning: service_cost_model.pkl not loaded.")
-
 # -------------------- Postgres bootstrap --------------------
 
 @asynccontextmanager
 async def lifespan(app):
     await PostgresDB.connect()
+    if not scheduler.running:
+        scheduler.start()
 
     async with PostgresDB.pool.acquire() as conn:
         await conn.execute("""
-        CREATE TABLE IF NOT EXISTS vehicle_service_logs (
-            id UUID PRIMARY KEY,
-            owner_name TEXT,
-            owner_phone_number TEXT,
-            vehicle_model TEXT,
-            vehicle_id TEXT,
-            service_date TIMESTAMP,
-            service_type TEXT,
-            description TEXT,
-            mileage INTEGER,
-            cost REAL,
-            next_service_date TIMESTAMP,
-            mechanic_name TEXT
+        CREATE TABLE IF NOT EXISTS departments (
+            id TEXT PRIMARY KEY,
+            name TEXT
+        );
+        """)
+        
+        try:
+            await conn.execute("ALTER TABLE departments ADD COLUMN IF NOT EXISTS hod_faculty_id TEXT UNIQUE;")
+        except Exception:
+            pass
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            email TEXT UNIQUE,
+            password_hash TEXT,
+            role TEXT CHECK (role IN ('student','faculty','hod','admin'))
         );
         """)
 
         await conn.execute("""
-        CREATE TABLE IF NOT EXISTS mechanics (
-            id UUID PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS students (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id),
+            usn TEXT,
+            department TEXT,
+            semester INTEGER
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS faculty (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id),
+            faculty_code TEXT UNIQUE,
             name TEXT,
-            specialization TEXT,
-            contact_number TEXT,
-            experience_years INTEGER
+            department TEXT,
+            department_id TEXT
+        );
+        """)
+        
+        try:
+            await conn.execute("ALTER TABLE faculty ADD COLUMN IF NOT EXISTS faculty_code TEXT UNIQUE;")
+            await conn.execute("ALTER TABLE faculty ADD COLUMN IF NOT EXISTS name TEXT;")
+            await conn.execute("ALTER TABLE faculty ADD COLUMN IF NOT EXISTS department_id TEXT;")
+        except Exception:
+            pass
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS subjects (
+            id TEXT PRIMARY KEY,
+            subject_name TEXT,
+            subject_code TEXT UNIQUE,
+            department_id TEXT
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS faculty_subjects (
+            id TEXT PRIMARY KEY,
+            faculty_id TEXT REFERENCES faculty(id),
+            subject_id TEXT REFERENCES subjects(id)
+        );
+        """)
+        
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS student_queries (
+            id TEXT PRIMARY KEY,
+            student_id TEXT REFERENCES students(id),
+            subject_id TEXT REFERENCES subjects(id),
+            message TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        
+        try:
+            await conn.execute("ALTER TABLE subjects ADD COLUMN IF NOT EXISTS subject_name TEXT;")
+            await conn.execute("ALTER TABLE subjects ADD COLUMN IF NOT EXISTS subject_code TEXT UNIQUE;")
+            await conn.execute("ALTER TABLE subjects ADD COLUMN IF NOT EXISTS department_id TEXT;")
+            await conn.execute("ALTER TABLE subjects ADD COLUMN IF NOT EXISTS semester INTEGER;")
+        except Exception:
+            pass
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS attendance_sessions (
+            id TEXT PRIMARY KEY,
+            subject_id TEXT REFERENCES subjects(id),
+            faculty_id TEXT REFERENCES faculty(id),
+            session_number INTEGER,
+            total_sessions INTEGER DEFAULT 40,
+            total_classes INTEGER,
+            date DATE
+        );
+        """)
+        
+        try:
+            await conn.execute("ALTER TABLE attendance_sessions ADD COLUMN IF NOT EXISTS total_classes INTEGER;")
+        except Exception:
+            pass
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS attendance_records (
+            id TEXT PRIMARY KEY,
+            session_id TEXT REFERENCES attendance_sessions(id),
+            student_id TEXT REFERENCES students(id),
+            status TEXT CHECK (status IN ('present', 'absent'))
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS attendance (
+            id TEXT PRIMARY KEY,
+            student_id TEXT REFERENCES students(id),
+            subject_id TEXT REFERENCES subjects(id),
+            attendance_percentage REAL
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS marks (
+            id TEXT PRIMARY KEY,
+            student_id TEXT REFERENCES students(id),
+            subject_id TEXT REFERENCES subjects(id),
+            internal_marks REAL,
+            external_marks REAL
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS results (
+            id TEXT PRIMARY KEY,
+            student_id TEXT REFERENCES students(id),
+            sgpa REAL,
+            cgpa REAL
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id TEXT PRIMARY KEY,
+            sender_id TEXT,
+            receiver_id TEXT,
+            message TEXT,
+            type TEXT DEFAULT 'query',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        
+        try:
+            await conn.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_status BOOLEAN DEFAULT FALSE;")
+        except Exception:
+            pass
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS ia_marks (
+            id TEXT PRIMARY KEY,
+            student_id TEXT REFERENCES students(id),
+            subject_id TEXT REFERENCES subjects(id),
+            faculty_id TEXT REFERENCES faculty(id),
+            marks_obtained INTEGER NOT NULL,
+            max_marks INTEGER DEFAULT 40,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(student_id, subject_id)
         );
         """)
 
@@ -117,4 +301,4 @@ app.router.lifespan_context = lifespan
 # ----------------------------------------------------------
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

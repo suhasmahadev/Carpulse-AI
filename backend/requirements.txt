@@ -21,3 +21,8 @@ numpy
 twilio
 qdrant-client 
 sentence-transformers
+openpyxl
+PyPDF2
+apscheduler
+google-generativeai
+duckduckgo-search

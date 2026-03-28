@@ -34,17 +34,19 @@ function mapEventsToMessages(events = []) {
   return msgs;
 }
 
-function isExcelLike(file) {
+function isProcessableFile(file) {
   if (!file) return false;
-  const t = file.type || "";
-  const name = file.name || "";
+  const t = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
   return (
     t.includes("excel") ||
     t.includes("spreadsheet") ||
     t.includes("csv") ||
-    name.toLowerCase().endsWith(".xlsx") ||
-    name.toLowerCase().endsWith(".xls") ||
-    name.toLowerCase().endsWith(".csv")
+    t === "application/pdf" ||
+    name.endsWith(".xlsx") ||
+    name.endsWith(".xls") ||
+    name.endsWith(".csv") ||
+    name.endsWith(".pdf")
   );
 }
 
@@ -272,8 +274,8 @@ export default function ChatPage() {
       });
     }
 
-    // Excel / CSV → auto process via backend
-    if (isExcelLike(file)) {
+    // Excel, CSV, PDF → auto process via backend
+    if (isProcessableFile(file)) {
       processAndSendFile(file);
     }
   }
@@ -332,7 +334,7 @@ export default function ChatPage() {
 
     try {
       let inlineData = null;
-      if (fileForInline && !isExcelLike(fileForInline)) {
+      if (fileForInline && !isProcessableFile(fileForInline)) {
         inlineData = await fileToInlineData(fileForInline);
       }
 
@@ -393,15 +395,15 @@ export default function ChatPage() {
     const text = input.trim();
     if (!text && !currentFile) return;
 
-    // If file is excel-like, it's already processed via processAndSendFile
-    const nonExcelFile =
-      currentFile && isExcelLike(currentFile) ? null : currentFile;
+    // If file is processable (xlsx/csv/pdf), it's already processed via processAndSendFile
+    const nonProcessedFile =
+      currentFile && isProcessableFile(currentFile) ? null : currentFile;
 
     setInput("");
 
-    await sendUserMessage(text, nonExcelFile);
+    await sendUserMessage(text, nonProcessedFile);
 
-    if (nonExcelFile) {
+    if (nonProcessedFile) {
       clearFile();
     }
   }

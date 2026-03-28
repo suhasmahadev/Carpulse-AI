@@ -1,23 +1,5 @@
 # backend/auth_db.py
+# This file is kept as a stub for import compatibility.
+# All auth is now handled via PostgresDB (asyncpg). No SQLite.
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-
-DATABASE_URL = "sqlite:///./vehicle_service_logs.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},  # required for SQLite + FastAPI
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-
-def get_db():
-  db = SessionLocal()
-  try:
-    yield db
-  finally:
-    db.close()
+# No engine, no SessionLocal, no Base — everything uses PostgresDB.

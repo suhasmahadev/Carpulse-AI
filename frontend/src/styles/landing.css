@@ -1,0 +1,232 @@
+/* landing.css - Ported from standalone landing page */
+:root {
+    --bg-color: #050505;
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.6);
+    /* Orange primary replaces legacy blue */
+    --accent-orange: #FF5A1F;
+    --accent-warm: #FF7A00;
+    --nav-bg: rgba(5, 5, 5, 0.6);
+}
+
+.landing-wrapper {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix Canvas background to match app */
+.landing-wrapper .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    background-color: transparent;
+}
+
+.landing-wrapper #sequence-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+}
+
+/* Navigation */
+.landing-wrapper #navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 1.2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    background: transparent;
+    transition: background 0.4s ease, backdrop-filter 0.4s ease, border-bottom 0.4s ease;
+    border-bottom: 1px solid transparent;
+}
+
+.landing-wrapper #navbar.scrolled {
+    background: var(--nav-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.landing-wrapper .nav-brand {
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.landing-wrapper .nav-links {
+    display: flex;
+    gap: 2.5rem;
+}
+
+.landing-wrapper .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 400;
+    transition: color 0.3s ease;
+}
+
+.landing-wrapper .nav-links a:hover {
+    color: var(--text-primary);
+}
+
+.landing-wrapper .nav-cta button {
+    background: var(--text-primary);
+    color: var(--bg-color);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.landing-wrapper .nav-cta button:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
+/* Scroll Content */
+.landing-wrapper .scroll-content {
+    position: relative;
+    z-index: 10;
+}
+
+.landing-wrapper .step {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 0 10vw;
+    background: transparent;
+}
+
+/* Text Positioning */
+.landing-wrapper .text-content {
+    max-width: 600px;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.landing-wrapper .text-content.center {
+    margin: 0 auto;
+    text-align: center;
+}
+
+.landing-wrapper .text-content.left {
+    margin-right: auto;
+}
+
+.landing-wrapper .text-content.right {
+    margin-left: auto;
+    text-align: right;
+}
+
+/* Typography styles */
+.landing-wrapper .text-content h1 {
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.landing-wrapper .text-content h2 {
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -1px;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.landing-wrapper .text-content p {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin-top: 1rem;
+    font-weight: 400;
+}
+
+/* CTA buttons */
+.landing-wrapper .cta-group {
+    margin-top: 3rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+}
+
+.landing-wrapper .primary-btn,
+.landing-wrapper .secondary-btn {
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.landing-wrapper .primary-btn {
+    /* Orange primary replaces blue */
+    background: linear-gradient(135deg, var(--accent-orange), var(--accent-warm));
+    color: white;
+    border: none;
+    box-shadow: 0 10px 30px rgba(255, 90, 31, 0.2);
+}
+
+.landing-wrapper .primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(255, 90, 31, 0.4);
+}
+
+.landing-wrapper .secondary-btn {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.landing-wrapper .secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .landing-wrapper #navbar {
+        padding: 1rem 1.5rem;
+    }
+
+    .landing-wrapper .nav-links {
+        display: none;
+    }
+
+    .landing-wrapper .text-content {
+        text-align: center !important;
+        margin: 0 auto !important;
+    }
+
+    .landing-wrapper .cta-group {
+        flex-direction: column;
+    }
+}

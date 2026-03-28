@@ -1,256 +1,309 @@
-import os
-import random
+import time
 from typing import Dict, Optional, List
-from datetime import datetime, timedelta, timezone
 
-from twilio.rest import Client
-
-from models.data_models import VehicleServiceLog, Mechanic
+from models.data_models import Student, Faculty, Subject, Attendance, Marks, Result
 from services.service import Service
 from repos.repo import Repo
-from vector_store.qdrant_service import QdrantService
-
-qdrant = QdrantService()
 
 repo = Repo()
 service = Service(repo)
 
 
-def normalize_dt(dt):
-    if dt is None:
-        return None
-    if isinstance(dt, str):
-        dt = datetime.fromisoformat(dt)
-    if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt
+# -------------------- STUDENT MANAGEMENT -------------------- #
 
-
-# ---------------- CORE CRUD ---------------- #
-
-async def add_vehicle_service_log(
-    vehicle_model: str,
-    owner_name: str,
-    owner_phone_number: str,
-    service_type: str,
-    service_date: str,
-    next_service_date: str,
-    service_cost: float,
-    description: str = "",
-    mileage: int = 0,
-    mechanic_name: Optional[str] = None
+async def add_student(
+    usn: str,
+    department: str,
+    semester: int,
+    user_id: Optional[str] = None,
 ) -> Dict:
+    """Add a new student record to the system."""
     try:
-        vehicle_id = f"{vehicle_model.replace(' ', '_').lower()}_{random.randint(1000,9999)}"
-
-        log = VehicleServiceLog(
-            vehicle_model=vehicle_model,
-            owner_name=owner_name,
-            owner_phone_number=owner_phone_number,
-            vehicle_id=vehicle_id,
-            service_type=service_type,
-            mechanic_name=mechanic_name,
-            description=description,
-            mileage=mileage,
-            cost=service_cost,
-            service_date=normalize_dt(datetime.strptime(service_date, "%Y-%m-%d")),
-            next_service_date=normalize_dt(datetime.strptime(next_service_date, "%Y-%m-%d")) if next_service_date else None,
-        )
-
-        res = await service.create_vehicle_service_log(log)
-        return {"success": True, "data": res.dict()}
+        s = Student(usn=usn, department=department, semester=semester, user_id=user_id)
+        res = await service.register_student(s)
+        return {"success": True, "data": res.model_dump()}
     except Exception as e:
         return {"success": False, "message": str(e)}
 
 
-async def list_services_by_vehicle(vehicle_model: str) -> Dict:
-    logs = await service.get_services_by_vehicle_model(vehicle_model)
-    return {"success": True, "data": [l.dict() for l in logs]}
+async def fetch_student_data(student_id: str) -> Dict:
+    """Fetch complete data for a student — profile, attendance, marks, and results."""
+    try:
+        student = await service.get_student(student_id)
+        if not student:
+            return {"success": False, "message": "Student not found"}
+
+        attendance = await service.get_attendance(student_id)
+        marks = await service.get_marks(student_id)
+        result = await service.get_result(student_id)
+
+        return {
+            "success": True,
+            "data": {
+                "student": student.model_dump(),
+                "attendance": [a.model_dump() for a in attendance],
+                "marks": [m.model_dump() for m in marks],
+                "result": result.model_dump() if result else None,
+            }
+        }
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
-async def get_vehicles_service_due_soon(days: int = 30) -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    today = datetime.utcnow()
-    due = []
-
-    for l in logs:
-        if l.next_service_date:
-            ns = normalize_dt(l.next_service_date)
-            if 0 <= (ns - today).days <= days:
-                due.append(l.dict())
-
-    return {"success": True, "data": due}
+async def list_all_students(department: Optional[str] = None) -> Dict:
+    """List all students, optionally filtered by department."""
+    students = await service.list_students(department)
+    return {"success": True, "data": [s.model_dump() for s in students]}
 
 
-async def update_service_cost_by_vehicle(vehicle_model: str, new_cost: float) -> Dict:
-    success = await service.update_service_cost_by_model(vehicle_model, new_cost)
-    return {"success": success}
+# -------------------- FACULTY MANAGEMENT -------------------- #
 
-
-async def remove_service_log_by_vehicle(vehicle_model: str) -> Dict:
-    success = await service.delete_by_vehicle_model(vehicle_model)
-    return {"success": success}
-
-
-async def get_vehicle_service_logs(vehicle_id: Optional[str] = None) -> Dict:
-    logs = await service.get_vehicle_service_logs(vehicle_id)
-    return {"success": True, "data": [l.dict() for l in logs]}
-
-
-# ---------------- ANALYTICS ---------------- #
-
-async def get_total_services_count() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    return {"count": len(logs)}
-
-
-async def get_average_service_cost() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    return {"average_cost": round(sum(l.cost for l in logs) / len(logs), 2) if logs else 0}
-
-
-async def get_most_frequent_service_type() -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    freq = {}
-    for l in logs:
-        freq[l.service_type] = freq.get(l.service_type, 0) + 1
-    return {"most_frequent_type": max(freq, key=freq.get) if freq else None}
-
-
-# ---------------- AUDITING ---------------- #
-
-async def get_most_recent_service() -> Dict:
-    logs = [l for l in await service.get_vehicle_service_logs(None) if l.service_date]
-    if not logs:
-        return {"most_recent_service": None}
-    logs.sort(key=lambda x: x.service_date, reverse=True)
-    return {"most_recent_service": logs[0].dict()}
-
-
-async def get_overdue_services() -> Dict:
-    today = datetime.utcnow()
-    overdue = []
-    for l in await service.get_vehicle_service_logs(None):
-        if l.next_service_date and normalize_dt(l.next_service_date) < today:
-            overdue.append(l.dict())
-    return {"data": overdue}
-
-
-async def get_owner_with_most_services() -> Dict:
-    count = {}
-    for l in await service.get_vehicle_service_logs(None):
-        count[l.owner_name] = count.get(l.owner_name, 0) + 1
-    return {"top_owner": max(count, key=count.get) if count else None}
-
-
-# ---------------- MECHANICS ---------------- #
-
-async def add_mechanic(name: str, specialization: str, contact_number: str, experience_years: int) -> Dict:
-    m = Mechanic(name=name, specialization=specialization, contact_number=contact_number, experience_years=experience_years)
-    res = await service.create_mechanic(m)
-    return {"success": True, "data": res.dict()}
-
-
-async def list_mechanics() -> Dict:
-    mechs = await service.list_mechanics()
-    return {"success": True, "data": [m.dict() for m in mechs]}
-
-
-async def get_mechanic_with_most_services() -> Dict:
-    count = {}
-    for l in await service.get_vehicle_service_logs(None):
-        if l.mechanic_name:
-            count[l.mechanic_name] = count.get(l.mechanic_name, 0) + 1
-    return {"top_mechanic": max(count, key=count.get) if count else None}
-
-
-async def get_total_cost_by_mechanic() -> Dict:
-    stats = {}
-    for l in await service.get_vehicle_service_logs(None):
-        if l.mechanic_name:
-            stats[l.mechanic_name] = stats.get(l.mechanic_name, 0) + l.cost
-    return {"mechanic_costs": stats}
-
-
-# ---------------- IMAGES ---------------- #
-
-IMAGE_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "service_images"))
-
-async def get_vehicle_images(vehicle_id: str) -> Dict:
-    if not os.path.exists(IMAGE_FOLDER):
-        return {"success": False, "data": []}
-    files = [f"/service_images/{f}" for f in os.listdir(IMAGE_FOLDER) if f.startswith(vehicle_id)]
-    return {"success": True, "data": files}
-# ---------------- DOCUMENTATION ---------------- #
-
-async def upload_service_documentation(
-    vehicle_model: str,
-    service_date: str,
-    document_type: str,
-    description: str = ""
+async def create_faculty(
+    faculty_code: str,
+    name: str,
+    department: str,
+    user_id: Optional[str] = None,
 ) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "service_date": service_date,
-            "document_type": document_type,
-            "description": description,
-            "uploaded_at": datetime.utcnow().isoformat()
-        }
-    }
+    """Create a new faculty member with a code, name, and department."""
+    try:
+        f = Faculty(faculty_code=faculty_code, name=name, department=department, department_id=department, user_id=user_id)
+        res = await service.register_faculty(f)
+        return {"success": True, "data": res.model_dump()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
-async def get_service_documentation(vehicle_model: str) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "documents": []
-        }
-    }
+async def list_all_faculty(department: Optional[str] = None) -> Dict:
+    """List all faculty members, optionally filtered by department."""
+    faculty_list = await service.list_faculty(department)
+    return {"success": True, "data": [f.model_dump() for f in faculty_list]}
 
 
-async def process_uploaded_service_images(
-    vehicle_model: str,
-    image_description: str = ""
+# -------------------- SUBJECT MANAGEMENT -------------------- #
+
+async def add_subject(
+    name: str,
+    department: str,
+    semester: int,
 ) -> Dict:
-    return {
-        "success": True,
-        "data": {
-            "vehicle_model": vehicle_model,
-            "image_description": image_description,
-            "processed_at": datetime.utcnow().isoformat()
-        }
-    }
+    """Add a new subject."""
+    try:
+        subject_code = f"{department.upper()}{semester}{name[:3].upper()}"
+        s = Subject(subject_name=name, subject_code=subject_code, department_id=department, semester=semester)
+        res = await service.create_subject(s)
+        return {"success": True, "data": res.model_dump()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
-# ---------------- REMINDERS ---------------- #
+async def list_all_subjects(
+    department: Optional[str] = None,
+    semester: Optional[int] = None,
+) -> Dict:
+    """List all subjects, optionally filtered by department and semester."""
+    subjects = await service.list_subjects(department, semester)
+    return {"success": True, "data": [s.model_dump() for s in subjects]}
 
-async def send_service_reminders(days: int = 7) -> Dict:
-    logs = await service.get_vehicle_service_logs(None)
-    today = datetime.utcnow()
 
-    due = [
-        l for l in logs
-        if l.next_service_date and
-        0 <= (normalize_dt(l.next_service_date) - today).days <= days
-    ]
+# -------------------- ATTENDANCE -------------------- #
 
-    return {
-        "success": True,
-        "count": len(due),
-        "vehicles": [l.dict() for l in due]
-    }
-async def semantic_search_services(query: str) -> dict:
-    results = qdrant.semantic_search(query)
+async def update_attendance(
+    student_id: str,
+    subject_id: str,
+    attendance_percentage: float,
+) -> Dict:
+    """Update or create attendance for a student in a subject."""
+    try:
+        existing = await service.get_attendance(student_id, subject_id)
+        a = Attendance(
+            student_id=student_id,
+            subject_id=subject_id,
+            attendance_percentage=attendance_percentage,
+        )
+        if existing:
+            success = await service.update_attendance(a)
+            return {"success": success, "action": "updated"}
+        else:
+            res = await service.add_attendance(a)
+            return {"success": True, "action": "created", "data": res.model_dump()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
-    return {
-        "query": query,
-        "matches": [
-            {
-                "score": hit.score,
-                "payload": hit.payload
-            } for hit in results
-        ]
-    }
+
+async def get_student_attendance(student_id: str) -> Dict:
+    """Get all attendance records for a student."""
+    records = await service.get_attendance(student_id)
+    return {"success": True, "data": [a.model_dump() for a in records]}
+
+
+# -------------------- MARKS -------------------- #
+
+async def update_marks(
+    student_id: str,
+    subject_id: str,
+    internal_marks: float,
+    external_marks: float,
+) -> Dict:
+    """Update or create marks for a student in a subject."""
+    try:
+        existing = await service.get_marks(student_id, subject_id)
+        m = Marks(
+            student_id=student_id,
+            subject_id=subject_id,
+            internal_marks=internal_marks,
+            external_marks=external_marks,
+        )
+        if existing:
+            success = await service.update_marks(m)
+            return {"success": success, "action": "updated"}
+        else:
+            res = await service.add_marks(m)
+            return {"success": True, "action": "created", "data": res.model_dump()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def get_student_marks(student_id: str) -> Dict:
+    """Get all marks records for a student."""
+    records = await service.get_marks(student_id)
+    return {"success": True, "data": [m.model_dump() for m in records]}
+
+
+# -------------------- RESULTS / SGPA-CGPA -------------------- #
+
+async def calculate_sgpa_cgpa(
+    student_id: str,
+    sgpa: float,
+    cgpa: float,
+) -> Dict:
+    """Enter or update SGPA/CGPA for a student."""
+    try:
+        existing = await service.get_result(student_id)
+        r = Result(student_id=student_id, sgpa=sgpa, cgpa=cgpa)
+        if existing:
+            success = await service.update_result(r)
+            return {"success": success, "action": "updated"}
+        else:
+            res = await service.add_result(r)
+            return {"success": True, "action": "created", "data": res.model_dump()}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def get_student_result(student_id: str) -> Dict:
+    """Get SGPA/CGPA result for a student."""
+    result = await service.get_result(student_id)
+    if not result:
+        return {"success": False, "message": "Result not found"}
+    return {"success": True, "data": result.model_dump()}
+
+
+async def list_all_results() -> Dict:
+    """List all student results."""
+    results = await service.list_results()
+    return {"success": True, "data": [r.model_dump() for r in results]}
+
+
+# -------------------- ANALYTICS & INTELLIGENCE -------------------- #
+
+async def get_student_analytics(student_id: str) -> Dict:
+    """Get performance analytics, risk analysis, and overall status for a student."""
+    try:
+        data = await service.get_analytics_student(student_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_faculty_analytics(faculty_id: str) -> Dict:
+    """Get subject-level performance and attendance analytics for a faculty member."""
+    try:
+        data = await service.get_analytics_faculty(faculty_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_hod_analytics(dept_id: str) -> Dict:
+    """Get department-wide performance and attendance analytics for the HOD."""
+    try:
+        data = await service.get_analytics_hod(dept_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_admin_analytics() -> Dict:
+    """Get system-wide academic performance and attendance analytics for the Admin."""
+    try:
+        data = await service.get_analytics_admin()
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+# -------------------- AI PREDICTION -------------------- #
+
+async def predict_student_risk(student_id: str) -> Dict:
+    """Predict the academic risk level (low/medium/high) for a student based on heuristic score."""
+    try:
+        data = await service.predict_student_risk(student_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+# -------------------- ALERTS & NOTIFICATIONS -------------------- #
+
+async def get_student_alerts(student_id: str) -> Dict:
+    """Get attendance alerts (critical < 75%) for a student."""
+    try:
+        data = await service.get_alerts_student(student_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_faculty_alerts(faculty_id: str) -> Dict:
+    """Get attendance alerts for students in subjects taught by the faculty."""
+    try:
+        data = await service.get_alerts_faculty(faculty_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_hod_alerts(dept_id: str) -> Dict:
+    """Get aggregate department-wide attendance alerts for the HOD."""
+    try:
+        data = await service.get_alerts_hod(dept_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_admin_alerts() -> Dict:
+    """Get system-wide critical attendance alerts for the Admin."""
+    try:
+        data = await service.get_alerts_admin()
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+# -------------------- IA MARKS -------------------- #
+
+async def get_subject_ia_marks(subject_id: str) -> Dict:
+    """Retrieve Internal Assessment marks for all students in a subject."""
+    try:
+        data = await service.get_ia_marks_for_subject(subject_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_student_ia_marks(student_id: str) -> Dict:
+    """Retrieve all Internal Assessment marks for a specific student."""
+    try:
+        data = await service.get_ia_marks_for_student(student_id)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+async def get_ia_admin_analytics() -> Dict:
+    """Retrieve system-wide Internal Assessment analytics."""
+    try:
+        data = await service.get_ia_admin_analytics()
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "message": str(e)}

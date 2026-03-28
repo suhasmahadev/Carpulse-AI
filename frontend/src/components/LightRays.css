@@ -1,0 +1,31 @@
+/* ============================================================
+   LightRays.css — Global fixed background canvas
+   ============================================================ */
+
+/* The fixed WebGL background layer — sits behind EVERYTHING */
+.light-rays-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;          /* bottom of the stack */
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* The root background page wrapper */
+.lrb-root {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  z-index: 1;          /* content sits above the canvas */
+}
+
+/* Generic container used by LightRays component when used inline */
+.light-rays-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  pointer-events: none;
+  overflow: hidden;
+}

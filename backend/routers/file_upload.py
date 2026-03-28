@@ -3,6 +3,8 @@ from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 import json
+import base64
+import PyPDF2
 from typing import List, Dict, Any
 import logging
 
@@ -12,25 +14,43 @@ logger = logging.getLogger(__name__)
 @router.post("/process-file")
 async def process_file(file: UploadFile = File(...)):
     """
-    Process uploaded files (Excel, CSV, PDF) and convert to text format for the agent
+    Process uploaded files (Excel, CSV, PDF, Images) and convert to text format for the agent.
+    Uses both content_type AND filename extension for robust detection.
     """
     try:
-        # Read file content
         contents = await file.read()
-        
-        if file.content_type in ['application/vnd.ms-excel', 
-                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']:
-            # Process Excel files
+        fname = (file.filename or "").lower()
+        ctype = (file.content_type or "").lower()
+
+        logger.info(f"Processing file: {file.filename}, content_type={ctype}, size={len(contents)} bytes")
+
+        # Detect by extension first (most reliable), then content_type
+        if fname.endswith(('.xlsx', '.xls')) or ctype in [
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]:
             result = await process_excel_file(contents, file.filename)
-        elif file.content_type == 'text/csv':
-            # Process CSV files
+
+        elif fname.endswith('.csv') or ctype in ['text/csv', 'application/csv']:
             result = await process_csv_file(contents, file.filename)
+
+        elif fname.endswith('.pdf') or ctype == 'application/pdf':
+            result = await process_pdf_file(contents, file.filename)
+
+        elif fname.endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp')) or ctype.startswith('image/'):
+            result = await process_image_file(contents, file.filename, file.content_type or 'image/png')
+
         else:
-            raise HTTPException(status_code=400, detail="Unsupported file type. Please upload Excel or CSV files.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: '{file.content_type}' (filename: {file.filename}). "
+                       f"Supported formats: Excel (.xlsx/.xls), CSV (.csv), PDF (.pdf), Images (.jpg/.png/.webp)."
+            )
 
         return JSONResponse(content=result)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
@@ -97,3 +117,66 @@ def convert_dataframe_to_text(df: pd.DataFrame, filename: str) -> str:
         text_parts.append(f"... and {len(df) - 5} more records")
     
     return "\n".join(text_parts)
+
+
+async def process_pdf_file(contents: bytes, filename: str) -> Dict[str, Any]:
+    """Process PDF file and convert text to structured text"""
+    try:
+        # Read PDF file
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
+        text_parts = []
+        text_parts.append(f"FILE: {filename}")
+        text_parts.append(f"TOTAL PAGES: {len(pdf_reader.pages)}")
+        text_parts.append("")
+        text_parts.append("TEXT CONTENT:")
+        text_parts.append("=" * 50)
+        
+        # Extract text from all pages
+        full_text = ""
+        for i, page in enumerate(pdf_reader.pages):
+            page_text = page.extract_text()
+            if page_text:
+                full_text += page_text + "\n"
+        
+        text_parts.append(full_text)
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "content": "\n".join(text_parts),
+            "record_count": len(pdf_reader.pages), # representing pages as records for consistency
+            "message": f"PDF file processed successfully. Extracted text from {len(pdf_reader.pages)} pages."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading PDF file: {str(e)}")
+
+
+async def process_image_file(contents: bytes, filename: str, content_type: str = "image/png") -> Dict[str, Any]:
+    """Process image file — encode to base64 for Gemini vision and provide metadata."""
+    try:
+        size_kb = round(len(contents) / 1024, 1)
+
+        # Base64 encode the image for Gemini multimodal
+        b64 = base64.b64encode(contents).decode('utf-8')
+        mime = content_type or 'image/png'
+
+        text_content = (
+            f"FILE: {filename}\n"
+            f"TYPE: Image ({mime})\n"
+            f"SIZE: {size_kb} KB\n\n"
+            f"[This is an uploaded image. The user wants you to analyze its contents. "
+            f"The image has been provided to you as base64 data for visual analysis.]"
+        )
+
+        return {
+            "success": True,
+            "filename": filename,
+            "content": text_content,
+            "file_type": "image",
+            "mime_type": mime,
+            "image_base64": b64,
+            "size_kb": size_kb,
+            "message": f"Image file processed successfully ({size_kb} KB)."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error processing image file: {str(e)}")

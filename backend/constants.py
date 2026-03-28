@@ -1,8 +1,8 @@
 # Agent details
 AGENT_NAME = "agent"
-AGENT_DESCRIPTION = "An AgenicAI based online app for maintaining a log of servicing done till date for customer vehicles with details and generating reminders for upcoming or any pending service."
-AGENT_MODEL ="gemini-3-flash-preview"
+AGENT_DESCRIPTION = "An Agentic AI based academic management system with role-based access control for managing students, faculty, attendance, marks, and results."
+AGENT_MODEL = "gemini-2.5-flash"
 
 # DB Details
-DB_NAME = "vehicle_service_logs.db"
-TABLE_NAME = "vehicle_service_logs"
+DB_NAME = "carpulse"
+TABLE_NAME = "users"

@@ -1,7 +1,7 @@
 // src/api/chatApi.js
 
 // src/pages/ChatPage.jsx
-export const BASE_URL = "http://127.0.0.1:8080";
+export const BASE_URL = "http://127.0.0.1:8000";
 export const AGENT_NAME = "agent";
 
 async function jsonOrThrow(res) {
@@ -64,17 +64,20 @@ export async function getSession(id) {
 }
 
 /**
- * Upload Excel/CSV to backend file processor.
- * This hits: /vehicle_service_logs/api/files/process-file
+ * Upload Excel/CSV/PDF/Image to backend file processor.
+ * This hits: /academic/api/files/process-file
  */
 export async function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
 
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
+
   const res = await fetch(
-    `${BASE_URL}/vehicle_service_logs/api/files/process-file`,
+    `${BASE_URL}/academic/api/files/process-file`,
     {
       method: "POST",
+      headers: token ? { "Authorization": `Bearer ${token}` } : {},
       body: formData,
     }
   );
@@ -102,6 +105,9 @@ export async function sendMessageStream({
     parts.push({ inlineData });
   }
 
+  // extract token from local storage
+  const token = localStorage.getItem("token") || "";
+
   // Vehicle id extraction like your old code
   const vehicleIdMatch = text
     ? text.match(/(?:vehicle\s*id|id)[:\s]*([a-zA-Z0-9-]+)/i)
@@ -122,6 +128,7 @@ export async function sendMessageStream({
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "Authorization": `Bearer ${token}`
     },
     body: JSON.stringify(payload),
   });
